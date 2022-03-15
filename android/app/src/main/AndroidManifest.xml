@@ -1,5 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.music_matcher">
+    <uses-permission android:name="android.permission.INTERNET" />
    <application
         android:label="music_matcher"
         android:name="${applicationName}"
