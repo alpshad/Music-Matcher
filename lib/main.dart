@@ -1,8 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
 import 'firebase_options.dart';
+import 'package:spotify_sdk/spotify_sdk.dart';
+import 'package:flutter_web_auth/flutter_web_auth.dart';
 
 enum ApplicationLoginState {
   loggedOut,
@@ -14,6 +20,8 @@ enum ApplicationLoginState {
 
 bool userLoggedIn = false;
 UserCredential? user;
+String spotifyClientID = "ed9e36fd550e4bdb854a0e810e79107f";
+String spotifyClientSecret = "";
 
 Future main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,6 +60,12 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
       ),
       home: const LoginScreen(title: 'Music Matcher Login'),
+      initialRoute: '/',
+      routes: {
+        '/': (context) => const HomeScreen(),
+        '/login': (context) => const LoginScreen(title: "Music Matcher"),
+        '/signup': (context) => const SignupScreen()
+      },
     );
   }
 }
@@ -415,10 +429,80 @@ class _HomeScreen extends State<HomeScreen> {
                   );
                 }
               )
-            )
+            ),
+            if (user == null)
+              // Spotify not connected
+              const Text("hi")
+            else
+              Container(
+                // Spotify connected
+                padding: const EdgeInsets.all(10),
+                child: const Text("Connect to your Spotify account to start matching!", textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.green, fontWeight: FontWeight.w500, fontSize: 24),
+                )
+              ),
+              Container(
+                padding: const EdgeInsets.all(10),
+                child: ElevatedButton(
+                  child: Text("Connect Account"),
+                  onPressed: () {
+                    // Connect to spotify
+
+                  },
+                )
+              )
           ]
         )
       )
     );
   }
+
+  Future<void> spotifyAuth() async {
+    const redirectUri = "/home";
+    const state = "spotifyState";
+
+    try {
+      String result = await FlutterWebAuth.authenticate(url: SpotifyAuth.reqAuth(clientId, redirectUri, state), callbackUrlScheme: "music-matcher");
+      String? returnedState = Uri.parse(result).queryParameters['state'];
+      if (state != returnedState) {
+        throw HttpException('Unable to access Spotify');
+      }
+
+      String? code = Uri.parse(result).queryParameters['code'];
+      var tokens = await 
+    
+    } on Exception catch (e) {
+      
+    }
+  }
+
+  Future<AuthTokens> getSpotifyAuthTokens(String code, String redirectUri) async {
+    var base64Cred = utf8.fuse(base64).encode('$spotifyClientID:$spotifyClientSecret');
+    var response = await http.post(Uri.dataFromString(SpotifyAuth.reqToken), body: {
+      'grant_type': 'authorization_code',
+      'code': code,
+      'redirect_uri': redirectUri,
+    }, headers: { HttpHeaders.authorizationHeader: 'Basic $base64Cred' });
+  }
+}
+
+class SpotifyAuth {
+  static List<String> scopes = [
+    'user-read-private',
+    'user-read-email',
+    'user-library-read',
+    'user-top-read',
+    'user-read-recently-played',
+    'user-follow-read',
+    'user-read-collaborative',
+    'app-remote-control',
+  ];
+
+  static String reqAuth(String clientId, String redirectUri, String state) {
+    return 'https://accounts.spotify.com/authorize?response_type=code&clientId=$clientId&scope=${scopes.join('%20')}&redirect_uri=$rediretUri&state=$state';
+  }
+
+  static String reqToken = 'https://accounts.spotify.com/api/token';
+  static String getCurrUser = 'https://api/spotify.com/v1/me';
+
 }
