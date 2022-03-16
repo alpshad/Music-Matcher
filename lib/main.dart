@@ -13,6 +13,7 @@ enum ApplicationLoginState {
 }
 
 bool userLoggedIn = false;
+UserCredential? user;
 
 Future main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -78,19 +79,27 @@ class _LoginScreen extends State<LoginScreen> {
   TextEditingController nameController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  String loginError = "";
 
-  void login(String username, String password) async {
+  Future<bool> login(String username, String password) async {
     try {
       UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: username,
         password: password
       );
+
+      user = userCredential;
+      return false;
     } on FirebaseAuthException catch (e) {
       if (e.code == 'user-not-found') {
-        print('No user found for that email.');
+        loginError = 'No user found for that email.';
+        return true;
       } else if (e.code == 'wrong-password') {
-        print('Wrong password provided for that user.');
+        loginError = 'Wrong password provided for that user.';
+        return true;
       }
+      loginError = "Error";
+      return true;
     }
   }
 
@@ -130,6 +139,8 @@ class _LoginScreen extends State<LoginScreen> {
                   child: TextFormField(
                     validator: (value) {
                       if (value == null || value.isEmpty) {
+                        setState(() => loginError = "");
+
                         return 'Email Required';
                       }
                       return null;
@@ -146,6 +157,7 @@ class _LoginScreen extends State<LoginScreen> {
                   child: TextFormField(
                     validator: (value) {
                       if (value == null || value.isEmpty) {
+                        setState(() => loginError = "");
                         return 'Password Required';
                       }
                       return null;
@@ -168,18 +180,36 @@ class _LoginScreen extends State<LoginScreen> {
                 ),
                 Container(
                     height: 50,
-                    padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
+                    padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
                     child: ElevatedButton(
                       child: const Text('Login'),
-                      onPressed: () {
+                      onPressed: () async {
                         if (_formKey.currentState!.validate()) {
                           // Log in
                           print(nameController.text);
                           print(passwordController.text);
-                          login(nameController.text, passwordController.text);
+                          bool error = await login(nameController.text, passwordController.text);
+                          if (!error)
+                          {
+                            // Signed in
+                            print("Signed in");
+                            Navigator.pushReplacement(context, 
+                              MaterialPageRoute(builder: (context) {
+                                return HomeScreen();
+                              })
+                            );
+                          }
+                          else {
+                            setState(() => loginError = loginError);
+                          }
                         }
                       },
                     )
+                  ),
+                  Text(loginError, 
+                    style: TextStyle(
+                      color: Colors.red
+                    ),
                   ),
                 ]
               ),
@@ -193,7 +223,7 @@ class _LoginScreen extends State<LoginScreen> {
                     style: TextStyle(fontSize: 20),
                   ),
                   onPressed: () {
-                    Navigator.push(
+                    Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(builder: (context) {
                         return SignupScreen();
@@ -212,32 +242,48 @@ class _LoginScreen extends State<LoginScreen> {
   }
 }
 
-class SignupScreen extends StatelessWidget {
+class SignupScreen extends StatefulWidget {
+  const SignupScreen({Key? key}) : super(key: key);
+  
+  @override
+  State<SignupScreen> createState() => _SignupScreen();
+}
+
+class _SignupScreen extends State<SignupScreen> {
   TextEditingController nameController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  String signupError = "";
 
-  void signup(String username, String password) async {
+  Future<bool> signup(String username, String password) async {
     try {
       UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: username,
         password: password
       );
+
+      user = userCredential;
+      return false;
     } on FirebaseAuthException catch (e) {
       if (e.code == 'weak-password') {
-        print('The password provided is too weak.');
+        signupError = 'The password provided is too weak.';
+        return true;
       } else if (e.code == 'email-already-in-use') {
-        print('The account already exists for that email.');
+        signupError = 'The account already exists for that email.';
+        return true;
       }
+      signupError = "Error";
+      return true;
     } catch (e) {
-      print(e);
+      signupError = "Error";
+      return true;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(),
+      appBar: AppBar(title: Text("Music Matcher")),
       body: Padding(
         padding: const EdgeInsets.all(10),
         child: ListView(children: <Widget>[
@@ -267,6 +313,7 @@ class SignupScreen extends StatelessWidget {
                 child: TextFormField(
                   validator: (value) {
                     if (value == null || value.isEmpty) {
+                      setState(() => signupError = "");
                       return 'Email Required';
                     }
                     return null;
@@ -283,6 +330,7 @@ class SignupScreen extends StatelessWidget {
                 child: TextFormField(
                   validator: (value) {
                     if (value == null || value.isEmpty) {
+                      setState(() => signupError = "");
                       return 'Password Required';
                     }
                     return null;
@@ -300,17 +348,72 @@ class SignupScreen extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
                     child: ElevatedButton(
                       child: const Text('Sign in'),
-                      onPressed: () {
+                      onPressed: () async {
                         if (_formKey.currentState!.validate()) {
                           // Log in
                           print(nameController.text);
-                          print(passwordController.text);
-                          signup(nameController.text, passwordController.text);
+                          print(passwordController.text);                        
+                          bool error = await signup(nameController.text, passwordController.text);
+                          if (!error)
+                          {
+                            // Signed in
+                            Navigator.pushReplacement(context, 
+                              MaterialPageRoute(builder: (context) {
+                                return HomeScreen();
+                              })
+                            );
+                          }
+                          else {
+                            setState(() => signupError = signupError);
+                          }
                         }
                       },
                     )
                   ),
+                  Text(signupError,
+                    style: TextStyle(
+                      color: Colors.red
+                    ),
+                  ),
                 ]
+              )
+            )
+          ]
+        )
+      )
+    );
+  }
+}
+
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({Key? key, HomeScreen}) : super(key: key);
+
+  @override
+  State<HomeScreen> createState() => _HomeScreen();
+}
+
+class _HomeScreen extends State<HomeScreen> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text("Music Matcher")),
+      body: Padding(
+        padding: const EdgeInsets.all(10),
+        child: ListView(
+          children: <Widget>[
+            Align(
+              alignment: Alignment.topRight,
+              child: ElevatedButton (
+                child: const Text('Sign Out'),
+                onPressed: () async {
+                  // Sign out
+                  await FirebaseAuth.instance.signOut();
+                  Navigator.pushReplacement(context, 
+                    MaterialPageRoute(builder: (context) {
+                      return LoginScreen(title: "Music Matcher");
+                    })
+                  );
+                }
               )
             )
           ]
