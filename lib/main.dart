@@ -457,33 +457,33 @@ class _HomeScreen extends State<HomeScreen> {
     );
   }
 
-  Future<void> spotifyAuth() async {
-    const redirectUri = "/home";
-    const state = "spotifyState";
+//   Future<void> spotifyAuth() async {
+//     const redirectUri = "/home";
+//     const state = "spotifyState";
 
-    try {
-      String result = await FlutterWebAuth.authenticate(url: SpotifyAuth.reqAuth(clientId, redirectUri, state), callbackUrlScheme: "music-matcher");
-      String? returnedState = Uri.parse(result).queryParameters['state'];
-      if (state != returnedState) {
-        throw HttpException('Unable to access Spotify');
-      }
+//     try {
+//       String result = await FlutterWebAuth.authenticate(url: SpotifyAuth.reqAuth(clientId, redirectUri, state), callbackUrlScheme: "music-matcher");
+//       String? returnedState = Uri.parse(result).queryParameters['state'];
+//       if (state != returnedState) {
+//         throw HttpException('Unable to access Spotify');
+//       }
 
-      String? code = Uri.parse(result).queryParameters['code'];
-      var tokens = await 
+//       String? code = Uri.parse(result).queryParameters['code'];
+//       var tokens = await 
     
-    } on Exception catch (e) {
+//     } on Exception catch (e) {
       
-    }
-  }
+//     }
+//   }
 
-  Future<AuthTokens> getSpotifyAuthTokens(String code, String redirectUri) async {
-    var base64Cred = utf8.fuse(base64).encode('$spotifyClientID:$spotifyClientSecret');
-    var response = await http.post(Uri.dataFromString(SpotifyAuth.reqToken), body: {
-      'grant_type': 'authorization_code',
-      'code': code,
-      'redirect_uri': redirectUri,
-    }, headers: { HttpHeaders.authorizationHeader: 'Basic $base64Cred' });
-  }
+//   Future<AuthTokens> getSpotifyAuthTokens(String code, String redirectUri) async {
+//     var base64Cred = utf8.fuse(base64).encode('$spotifyClientID:$spotifyClientSecret');
+//     var response = await http.post(Uri.dataFromString(SpotifyAuth.reqToken), body: {
+//       'grant_type': 'authorization_code',
+//       'code': code,
+//       'redirect_uri': redirectUri,
+//     }, headers: { HttpHeaders.authorizationHeader: 'Basic $base64Cred' });
+//   }
 }
 
 class SpotifyAuth {
@@ -499,7 +499,7 @@ class SpotifyAuth {
   ];
 
   static String reqAuth(String clientId, String redirectUri, String state) {
-    return 'https://accounts.spotify.com/authorize?response_type=code&clientId=$clientId&scope=${scopes.join('%20')}&redirect_uri=$rediretUri&state=$state';
+    return 'https://accounts.spotify.com/authorize?response_type=code&clientId=$clientId&scope=${scopes.join('%20')}&redirect_uri=$redirectUri&state=$state';
   }
 
   static String reqToken = 'https://accounts.spotify.com/api/token';
