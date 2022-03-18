@@ -7,7 +7,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'firebase_options.dart';
-import 'package:spotify_sdk/spotify_sdk.dart';
 import 'package:flutter_web_auth/flutter_web_auth.dart';
 
 enum ApplicationLoginState {
