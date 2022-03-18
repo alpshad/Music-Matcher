@@ -59,7 +59,6 @@ class MyApp extends StatelessWidget {
         // is not restarted.
         primarySwatch: Colors.blue,
       ),
-      home: const LoginScreen(title: 'Music Matcher Login'),
       initialRoute: '/',
       routes: {
         '/': (context) => const HomeScreen(),
@@ -141,7 +140,7 @@ class _LoginScreen extends State<LoginScreen> {
                 alignment: Alignment.center,
                 padding: const EdgeInsets.all(10),
                 child: const Text(
-                  'Sign in',
+                  'Log in',
                   style: TextStyle(fontSize: 20),
                 )),
             Form(
@@ -200,8 +199,6 @@ class _LoginScreen extends State<LoginScreen> {
                       onPressed: () async {
                         if (_formKey.currentState!.validate()) {
                           // Log in
-                          print(nameController.text);
-                          print(passwordController.text);
                           bool error = await login(nameController.text, passwordController.text);
                           if (!error)
                           {
@@ -361,7 +358,7 @@ class _SignupScreen extends State<SignupScreen> {
                     height: 50,
                     padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
                     child: ElevatedButton(
-                      child: const Text('Sign in'),
+                      child: const Text('Sign up'),
                       onPressed: () async {
                         if (_formKey.currentState!.validate()) {
                           // Log in
@@ -391,7 +388,28 @@ class _SignupScreen extends State<SignupScreen> {
                   ),
                 ]
               )
-            )
+            ),
+            Row(
+              children: <Widget>[
+                const Text('Have an account?'),
+                TextButton(
+                  child: const Text(
+                    'Log in',
+                    style: TextStyle(fontSize: 20),
+                  ),
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) {
+                        return const LoginScreen(title: "Music Matcher");
+                      }),
+                    );
+                    //signup screen
+                  },
+                )
+              ],
+              mainAxisAlignment: MainAxisAlignment.center,
+            ),
           ]
         )
       )
