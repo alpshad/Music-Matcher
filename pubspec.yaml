@@ -40,6 +40,8 @@ dependencies:
   firebase_auth: ^3.3.10
   provider: ^6.0.2
   flutter_web_auth: ^0.4.1
+  http_interceptor: ^1.0.2
+  flutter_secure_storage: ^5.0.2
 
 dev_dependencies:
   flutter_test:
