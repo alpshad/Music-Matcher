@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 import 'package:music_matcher/signin/signin-flow.dart';
 import 'package:music_matcher/spotify/spotify-auth.dart';
 import 'package:provider/provider.dart';
@@ -11,6 +12,7 @@ import 'package:http/http.dart' as http;
 import 'firebase_options.dart';
 import 'package:flutter_web_auth/flutter_web_auth.dart';
 
+import 'models/apple-music-user.dart';
 import 'models/spotify-auth-tokens.dart';
 import 'models/spotify-user.dart';
 
@@ -25,8 +27,7 @@ enum ApplicationLoginState {
 bool userLoggedIn = false;
 UserCredential? user;
 SpotifyUser? spotifyUser;
-String spotifyClientID = "ed9e36fd550e4bdb854a0e810e79107f";
-String spotifyClientSecret = "fd746f0b1f764a5983aa5274c3840cd8";
+AppleMusicUser? appleMusicUser;
 
 Future main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -84,6 +85,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreen extends State<HomeScreen> {
+  //static const platform = MethodChannel('apple-music.musicmatcher/auth');
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -114,6 +117,7 @@ class _HomeScreen extends State<HomeScreen> {
               Container(
                 padding: const EdgeInsets.all(0),
                 child: ListView(
+                  shrinkWrap: true,
                   children: <Widget>[
                     Container(
                       // Spotify not connected
@@ -130,6 +134,40 @@ class _HomeScreen extends State<HomeScreen> {
                           // Connect to spotify
                           spotifyUser = await SpotifyAuth.spotifyAuth();
                           setState(() => { spotifyUser != null });
+                        },
+                      )
+                    )
+                  ]
+                )
+              ),
+            if (appleMusicUser != null)
+              // Apple Music connected
+              const Text("hello world")
+            else
+              Container(
+                padding: const EdgeInsets.all(0),
+                child: ListView(
+                  shrinkWrap: true,
+                  children: <Widget>[
+                    Container(
+                      // Spotify not connected
+                      padding: const EdgeInsets.all(10),
+                      child: const Text("Connect to your Apple Music account to start matching!", textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500, fontSize: 24),
+                      )
+                    ),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      child: ElevatedButton(
+                        child: Text("Connect Account"),
+                        onPressed: () async {
+                          // Connect to Apple Music
+                          try {
+                            //appleMusicUser = await platform.invokeMethod('appleMusicAuth');
+                            setState(() => { appleMusicUser != null });
+                          } on PlatformException catch (e) {
+                            print("Error connecting to Apple Music");
+                          }
                         },
                       )
                     )
