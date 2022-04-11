@@ -18,8 +18,8 @@ import 'channel_page.dart';
 UserCredential? user;
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({Key? key, required this.client, required this.title, required this.channel}) : super(key: key);
-
+  // const ChatScreen({Key? key, required this.client, required this.title, required this.channel}) : super(key: key);
+  const ChatScreen({Key? key, required this.client}) : super(key: key);
 
   // This widget is the home page of your application. It is stateful, meaning
   // that it has a State object (defined below) that contains fields that affect
@@ -31,8 +31,8 @@ class ChatScreen extends StatefulWidget {
   // always marked "final".
 
   final s.StreamChatClient client;
-  final String title;
-  final s.Channel channel;
+  // final String title;
+  // final s.Channel channel;
 
   @override
   State<ChatScreen> createState() => _ChatScreen();
@@ -42,6 +42,17 @@ class _ChatScreen extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        // Here we take the value from the MyHomePage object that was created by
+        // the App.build method, and use it to set our appbar title.
+          title: Text("CHAT"),
+          automaticallyImplyLeading: true,
+          //`true` if you want Flutter to automatically add Back Button when needed,
+          //or `false` if you want to force your own back button every where
+          leading: IconButton(icon:Icon(Icons.arrow_back),
+            onPressed:() => Navigator.pop(context, false),
+          )
+      ),
       body: StreamChat(
         client: widget.client,
         child: ChannelListPage()

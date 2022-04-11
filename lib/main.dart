@@ -49,6 +49,7 @@ Future main() async {
       }
     });
 
+  /*
   var userId = "";
   String? email = "";
   email = FirebaseAuth.instance.currentUser?.email;
@@ -64,17 +65,13 @@ Future main() async {
   } else if(email == "amir.hya@gmail.com" || email == "amirtest1@gmail.com"){
     userId = "Amir";
   }
-
+  */
 
   /// Create a new instance of [StreamChatClient] passing the apikey obtained from your
   /// project dashboard.
   final client = s.StreamChatClient(
     '3zcmfx8umv2e',
     logLevel: s.Level.INFO,);
-  await client.connectUser(
-    s.User(id: userId),
-    client.devToken(userId).rawValue,
-  );
 
   runApp(MyApp(client: client));
 }
@@ -125,6 +122,31 @@ class _HomeScreen extends State<HomeScreen> {
   //static const platform = MethodChannel('apple-music.musicmatcher/auth');
 
   @override
+  void initState(){
+    super.initState();
+    var userId = "";
+    String? email = "";
+    email = FirebaseAuth.instance.currentUser?.email;
+
+    if(email == "alpshadow@gmail.com" || email == "thecatnamedwinter@gmail.com"){
+      userId = "Amy";
+    }
+    else if(email == "mariov7757@gmail.com"){
+      userId = "Mario";
+    }
+    else if(email == "ziruihuang@email.arizona.edu"){
+      userId = "Ray";
+    } else if(email == "amir.hya@gmail.com" || email == "amirtest1@gmail.com"){
+      userId = "Amir";
+    }
+
+    widget.client.connectUser(
+      s.User(id: userId),
+      widget.client.devToken(userId).rawValue,
+    ).then((result)=> print("finished"));
+
+  }
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text("Music Matcher")),
@@ -137,6 +159,7 @@ class _HomeScreen extends State<HomeScreen> {
               child: ElevatedButton (
                 child: const Text('Sign Out'),
                 onPressed: () async {
+                  widget.client.closeConnection();
                   // Sign out
                   await FirebaseAuth.instance.signOut();
                   Navigator.pushReplacement(context, 
@@ -164,15 +187,19 @@ class _HomeScreen extends State<HomeScreen> {
                           child: ElevatedButton(
                             child: Text("Chat"),
                             onPressed: () async {
+                              /*
                               String username = StreamChat.of(context).currentUser!.name;
                               String id = StreamChat.of(context).currentUser!.id;
                               String url = "http://cdn.onlinewebfonts.com/svg/img_56553.png";
                               StreamApi.initUser(widget.client, username: username, urlImage: url, id: id, token: widget.client.devToken(id).rawValue);
-                              final otherUser = "Amy";
+                              final otherUser = "Ray";
                               final channel = await StreamApi.createChannel(widget.client, type: "messaging", name: otherUser, id: id, image: url, idMembers: [id, otherUser]);
                               // StreamApi.watchChannel(client, type: type, id: id)
+
+                               */
                               Navigator.of(context).push(MaterialPageRoute(builder: (_) =>
-                                  ChannelsBloc(child: StreamChat(client: widget.client, child: ChatScreen(client: widget.client, channel: channel,title: otherUser)),
+                                  // ChannelsBloc(child: StreamChat(client: widget.client, child: ChatScreen(client: widget.client, channel: channel,title: otherUser)),
+                              ChannelsBloc(child: StreamChat(client: widget.client, child: ChatScreen(client: widget.client)),
                               )));
                             },
                           )
