@@ -9,6 +9,7 @@ import 'package:music_matcher/signin/signin-flow.dart';
 import 'package:music_matcher/spotify/spotify-auth.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
+import 'apple-music/apple-music-auth.dart';
 import 'firebase_options.dart';
 import 'package:flutter_web_auth/flutter_web_auth.dart';
 
@@ -65,7 +66,7 @@ class MyApp extends StatelessWidget {
         // is not restarted.
         primarySwatch: Colors.blue,
       ),
-      initialRoute: '/',
+      initialRoute: '/login',
       routes: {
         '/': (context) => const HomeScreen(),
         '/login': (context) => const LoginScreen(title: "Music Matcher"),
@@ -85,7 +86,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreen extends State<HomeScreen> {
-  //static const platform = MethodChannel('apple-music.musicmatcher/auth');
+  static const platform = MethodChannel('apple-music.musicmatcher/auth');
 
   @override
   Widget build(BuildContext context) {
@@ -163,9 +164,13 @@ class _HomeScreen extends State<HomeScreen> {
                         onPressed: () async {
                           // Connect to Apple Music
                           try {
-                            //appleMusicUser = await platform.invokeMethod('appleMusicAuth');
+                            String userToken = await platform.invokeMethod('appleMusicAuth');
+                            AppleMusicAuth.storeUserToken(userToken);
+                            appleMusicUser = AppleMusicUser();
                             setState(() => { appleMusicUser != null });
-                          } on PlatformException catch (e) {
+                            await AppleMusicAuth.getAlbum();
+                            print("album gotten");
+                          } on PlatformException {
                             print("Error connecting to Apple Music");
                           }
                         },
@@ -173,7 +178,11 @@ class _HomeScreen extends State<HomeScreen> {
                     )
                   ]
                 )
-              )
+              ),
+            Container(
+              padding: const EdgeInsets.all(0),
+              // Profile Widget
+            )
           ]
         )
       )

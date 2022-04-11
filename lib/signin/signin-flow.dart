@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:music_matcher/signin/profile-flow.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_web_auth/flutter_web_auth.dart';
@@ -313,7 +314,7 @@ class _SignupScreen extends State<SignupScreen> {
                             // Signed in
                             Navigator.pushReplacement(context, 
                               MaterialPageRoute(builder: (context) {
-                                return HomeScreen();
+                                return ProfileScreen();
                               })
                             );
                           }
