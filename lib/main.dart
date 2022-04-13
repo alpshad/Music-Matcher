@@ -13,9 +13,7 @@ import 'apple-music/apple-music-auth.dart';
 import 'firebase_options.dart';
 import 'package:flutter_web_auth/flutter_web_auth.dart';
 
-import 'models/apple-music-user.dart';
 import 'models/spotify-auth-tokens.dart';
-import 'models/spotify-user.dart';
 
 enum ApplicationLoginState {
   loggedOut,
@@ -27,8 +25,6 @@ enum ApplicationLoginState {
 
 bool userLoggedIn = false;
 UserCredential? user;
-SpotifyUser? spotifyUser;
-AppleMusicUser? appleMusicUser;
 
 Future main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -87,6 +83,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreen extends State<HomeScreen> {
   static const platform = MethodChannel('apple-music.musicmatcher/auth');
+  bool spotifyConnected = false;
+  bool appleMusicConnected = false;
 
   @override
   Widget build(BuildContext context) {
@@ -111,9 +109,10 @@ class _HomeScreen extends State<HomeScreen> {
                 }
               )
             ),
-            if (spotifyUser != null)
+            if (spotifyConnected)
               // Spotify connected
-              const Text("hello world")
+              // Grab data from spotify
+              const Text("Spotify Connected")
             else
               Container(
                 padding: const EdgeInsets.all(0),
@@ -133,17 +132,18 @@ class _HomeScreen extends State<HomeScreen> {
                         child: Text("Connect Account"),
                         onPressed: () async {
                           // Connect to spotify
-                          spotifyUser = await SpotifyAuth.spotifyAuth();
-                          setState(() => { spotifyUser != null });
+                          await SpotifyAuth.spotifyAuth();
+                          setState(() => { spotifyConnected = true });
                         },
                       )
                     )
                   ]
                 )
               ),
-            if (appleMusicUser != null)
+            if (appleMusicConnected)
               // Apple Music connected
-              const Text("hello world")
+              // Grab Apple Music data
+              const Text("Apple Music Connected")
             else
               Container(
                 padding: const EdgeInsets.all(0),
@@ -166,8 +166,7 @@ class _HomeScreen extends State<HomeScreen> {
                           try {
                             String userToken = await platform.invokeMethod('appleMusicAuth');
                             AppleMusicAuth.storeUserToken(userToken);
-                            appleMusicUser = AppleMusicUser();
-                            setState(() => { appleMusicUser != null });
+                            setState(() => { appleMusicConnected = true });
                             await AppleMusicAuth.getAlbum();
                             print("album gotten");
                           } on PlatformException {

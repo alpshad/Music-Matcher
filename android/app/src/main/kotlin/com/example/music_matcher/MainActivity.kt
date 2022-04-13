@@ -30,7 +30,8 @@ class MainActivity: FlutterActivity() {
                 startActivityForResult(intent, 1)
 
                 //Thread waiting = new Thread()
-                result.success(userToken)
+                result.success(authenticationManager.handleTokenResult(startActivityForResult(intent, 1)))
+                //result.success(userToken)
 
             } else {
                 result.notImplemented()
@@ -48,8 +49,8 @@ class MainActivity: FlutterActivity() {
                 val error = result.error
             }
             else {
-                userToken = result.getMusicUserToken()
-                tokenSet = true
+                setResult(resultCode, data)
+                //tokenSet = true
             }
         }
         else {

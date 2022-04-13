@@ -1,6 +1,4 @@
 import 'package:http/http.dart' as http;
-import 'package:music_matcher/models/apple-music-user.dart';
-import 'package:music_matcher/models/spotify-user.dart';
 import 'package:http_interceptor/http_interceptor.dart';
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -44,7 +42,7 @@ class AppleMusicAuth {
     }
   }
 
-  static Future<SpotifyUser> getCurrentUser() async {
+  static Future<bool> getCurrentUser() async {
     var authToken = await SpotifyAuthTokens.readTokens();
     final response = await http.get(
       Uri.parse(SpotifyAuth.getCurrUser), headers: { HttpHeaders.authorizationHeader: "Bearer ${authToken?.accessToken}"});
@@ -54,7 +52,7 @@ class AppleMusicAuth {
     if (response.statusCode == 200) {
       //return User.fromJson(json.decode(response.body));
       print(json.decode(response.body));
-      return SpotifyUser();
+      return true;
     } else {
       throw Exception(
           'Failed to get user with status code ${response.statusCode}');
@@ -65,7 +63,7 @@ class AppleMusicAuth {
    AppleMusicAuthTokens.fromString(userToken);
   }
 
-  static Future<SpotifyUser?> appleMusicAuth() async {
+  static Future<bool> appleMusicAuth() async {
     const redirectUri = "musicmatcher:/";
     const state = "spotifyState";
 
@@ -85,7 +83,7 @@ class AppleMusicAuth {
     
     } on Exception catch (e) {
       print(e);
-      return null;
+      return false;
     }
   }
 

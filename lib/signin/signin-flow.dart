@@ -60,6 +60,11 @@ class _LoginScreen extends State<LoginScreen> {
     }
   }
 
+  @override 
+  Future<void> resetPassword(String email) async {
+    await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -128,8 +133,14 @@ class _LoginScreen extends State<LoginScreen> {
                   ),
                 ),
                 TextButton(
-                  onPressed: () {
+                  onPressed: () async {
                     //forgot password screen
+                    await resetPassword(FirebaseAuth.instance.currentUser?.email ?? "");
+                    Navigator.pushReplacement(context,
+                      MaterialPageRoute(builder: (context) {
+                        return ForgotPasswordScreen();
+                      })
+                    );
                   },
                   child: const Text(
                     'Forgot Password',
@@ -242,6 +253,20 @@ class _SignupScreen extends State<SignupScreen> {
       body: Padding(
         padding: const EdgeInsets.all(10),
         child: ListView(children: <Widget>[
+          Align(
+              alignment: Alignment.topLeft,
+              child: ElevatedButton (
+                child: const Text('Back'),
+                onPressed: () async {
+                  // Sign out
+                  Navigator.pushReplacement(context, 
+                    MaterialPageRoute(builder: (context) {
+                      return LoginScreen(title: "Music Matcher");
+                    })
+                  );
+                }
+              )
+            ),
           Container(
               alignment: Alignment.center,
               padding: const EdgeInsets.all(10),
@@ -356,6 +381,58 @@ class _SignupScreen extends State<SignupScreen> {
             ),
           ]
         )
+      )
+    );
+  }
+}
+
+class ForgotPasswordScreen extends StatefulWidget {
+  const ForgotPasswordScreen({Key? key}) : super(key: key);
+  
+  @override
+  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreen();
+}
+
+class _ForgotPasswordScreen extends State<ForgotPasswordScreen> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text("Music Matcher")),
+      body: Padding(
+        padding: const EdgeInsets.all(10),
+        child: ListView(children: <Widget>[
+          Align(
+              alignment: Alignment.topLeft,
+              child: ElevatedButton (
+                child: const Text('Back'),
+                onPressed: () async {
+                  // Sign out
+                  Navigator.pushReplacement(context, 
+                    MaterialPageRoute(builder: (context) {
+                      return LoginScreen(title: "Music Matcher");
+                    })
+                  );
+                }
+              )
+            ),
+          Container(
+              alignment: Alignment.center,
+              padding: const EdgeInsets.all(10),
+              child: const Text(
+                'Email Sent!',
+                style: TextStyle(
+                    color: Colors.blue,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 30),
+              )),
+          Container(
+              alignment: Alignment.center,
+              padding: const EdgeInsets.all(10),
+              child: Text(
+                'A password reset email was sent to ${FirebaseAuth.instance.currentUser?.email}',
+                style: TextStyle(fontSize: 20),
+              )),
+        ])
       )
     );
   }
