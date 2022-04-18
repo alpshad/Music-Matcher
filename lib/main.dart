@@ -136,7 +136,8 @@ class _HomeScreen extends State<HomeScreen> {
     }
     else if(email == "ziruihuang@email.arizona.edu"){
       userId = "Ray";
-    } else if(email == "amir.hya@gmail.com" || email == "amirtest1@gmail.com"){
+    }
+    else if(email == "amir.hya@gmail.com" || email == "amirtest1@gmail.com"){
       userId = "Amir";
     }
 
