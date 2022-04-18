@@ -15,6 +15,7 @@ class AppleMusicAuthTokens {
 
   Future<void> saveTokens() async {
     try {
+      print(userToken);
       final storage = new FlutterSecureStorage();
       await storage.write(key: accessTokenKey, value: userToken);
     } catch (e) {
@@ -22,7 +23,7 @@ class AppleMusicAuthTokens {
     }
   }
 
-  static Future<AppleMusicAuthTokens?> readTokens() async {
+  static Future<String?> readTokens() async {
     String? accessKey;
     final storage = new FlutterSecureStorage();
     accessKey = await storage.read(key: accessTokenKey);
@@ -30,7 +31,7 @@ class AppleMusicAuthTokens {
       return null;
     }
 
-    return AppleMusicAuthTokens(accessKey);
+    return accessKey;
   }
 
   // static Future<void> updateToken() async {

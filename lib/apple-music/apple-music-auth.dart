@@ -60,7 +60,8 @@ class AppleMusicAuth {
   }
 
   static void storeUserToken(userToken) {
-   AppleMusicAuthTokens.fromString(userToken);
+   AppleMusicAuthTokens token = AppleMusicAuthTokens.fromString(userToken);
+   token.saveTokens();
   }
 
   static Future<bool> appleMusicAuth() async {
