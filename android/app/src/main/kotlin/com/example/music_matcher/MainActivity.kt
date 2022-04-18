@@ -30,7 +30,7 @@ class MainActivity: FlutterActivity() {
                 startActivityForResult(intent, 1)
 
                 //Thread waiting = new Thread()
-                result.success(authenticationManager.handleTokenResult(startActivityForResult(intent, 1)))
+                // result.success(authenticationManager.handleTokenResult(test))
                 //result.success(userToken)
 
             } else {
