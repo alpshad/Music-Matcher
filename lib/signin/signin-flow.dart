@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:music_matcher/signin/profile-flow.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_web_auth/flutter_web_auth.dart';
@@ -59,6 +60,11 @@ class _LoginScreen extends State<LoginScreen> {
       loginError = "Error";
       return true;
     }
+  }
+
+  @override 
+  Future<void> resetPassword(String email) async {
+    await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
   }
 
   @override
@@ -129,8 +135,14 @@ class _LoginScreen extends State<LoginScreen> {
                   ),
                 ),
                 TextButton(
-                  onPressed: () {
+                  onPressed: () async {
                     //forgot password screen
+                    await resetPassword(FirebaseAuth.instance.currentUser?.email ?? "");
+                    Navigator.pushReplacement(context,
+                      MaterialPageRoute(builder: (context) {
+                        return ForgotPasswordScreen(client: widget.client);
+                      })
+                    );
                   },
                   child: const Text(
                     'Forgot Password',
@@ -245,6 +257,20 @@ class _SignupScreen extends State<SignupScreen> {
       body: Padding(
         padding: const EdgeInsets.all(10),
         child: ListView(children: <Widget>[
+          Align(
+              alignment: Alignment.topLeft,
+              child: ElevatedButton (
+                child: const Text('Back'),
+                onPressed: () async {
+                  // Sign out
+                  Navigator.pushReplacement(context, 
+                    MaterialPageRoute(builder: (context) {
+                      return LoginScreen(title: "Music Matcher", client: widget.client);
+                    })
+                  );
+                }
+              )
+            ),
           Container(
               alignment: Alignment.center,
               padding: const EdgeInsets.all(10),
@@ -317,7 +343,8 @@ class _SignupScreen extends State<SignupScreen> {
                             // Signed in
                             Navigator.pushReplacement(context, 
                               MaterialPageRoute(builder: (context) {
-                                return HomeScreen(client: widget.client);
+                                // return HomeScreen(client: widget.client);
+                                return ProfileScreen(client: widget.client);
                               })
                             );
                           }
@@ -359,6 +386,59 @@ class _SignupScreen extends State<SignupScreen> {
             ),
           ]
         )
+      )
+    );
+  }
+}
+
+class ForgotPasswordScreen extends StatefulWidget {
+  final StreamChatClient client;
+  const ForgotPasswordScreen({Key? key, required this.client}) : super(key: key);
+  
+  @override
+  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreen();
+}
+
+class _ForgotPasswordScreen extends State<ForgotPasswordScreen> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text("Music Matcher")),
+      body: Padding(
+        padding: const EdgeInsets.all(10),
+        child: ListView(children: <Widget>[
+          Align(
+              alignment: Alignment.topLeft,
+              child: ElevatedButton (
+                child: const Text('Back'),
+                onPressed: () async {
+                  // Sign out
+                  Navigator.pushReplacement(context, 
+                    MaterialPageRoute(builder: (context) {
+                      return LoginScreen(title: "Music Matcher", client: widget.client);
+                    })
+                  );
+                }
+              )
+            ),
+          Container(
+              alignment: Alignment.center,
+              padding: const EdgeInsets.all(10),
+              child: const Text(
+                'Email Sent!',
+                style: TextStyle(
+                    color: Colors.blue,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 30),
+              )),
+          Container(
+              alignment: Alignment.center,
+              padding: const EdgeInsets.all(10),
+              child: Text(
+                'A password reset email was sent to ${FirebaseAuth.instance.currentUser?.email}',
+                style: TextStyle(fontSize: 20),
+              )),
+        ])
       )
     );
   }

@@ -1,11 +1,11 @@
 import 'package:http/http.dart' as http;
-import 'package:music_matcher/models/spotify-user.dart';
 import 'package:http_interceptor/http_interceptor.dart';
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:flutter/foundation.dart';
 
+import '../models/apple-music-auth-tokens.dart';
 import '../models/spotify-auth-tokens.dart';
 
 import 'dart:io';
@@ -22,11 +22,27 @@ import 'package:flutter_web_auth/flutter_web_auth.dart';
 
 class AppleMusicAuth {
 
-  static String reqToken = 'https://accounts.spotify.com/api/token';
-  static String getCurrUser = 'https://api.spotify.com/v1/me';
+  static String reqToken = '';
+  static String getCurrUser = '';
 
+  // Put under authorization bearer header in api requests
+  static String devToken = 'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IkoyOTNXWUQ3WVEifQ.eyJpYXQiOjE2NDkyOTIxMDcsImV4cCI6MTY2NDg0NDEwNywiaXNzIjoiM0haVlpHTVNONSJ9.T37bFWgg9gph3zEQF1qgEf7I83wws13-V8ZRQbtzj4nMLylyFH321rbAgk9BAc8E88jiimYn37DJtsaIiN19jg';
+  //static String userToken = '';
 
-  static Future<SpotifyUser> getCurrentUser() async {
+  static Future<String> getAlbum() async {
+    //print(userToken);
+    var authToken = await AppleMusicAuthTokens.readTokens() as String;
+    final response = await http.get(Uri.parse("https://api.music.apple.com/v1/me/history/heavy-rotation"), headers: { HttpHeaders.authorizationHeader: "Bearer $devToken", "Music-User-Token": authToken});
+    
+    if (response.statusCode == 200) {
+      print(json.decode(response.body));
+      return "Album Acquired";
+    } else {
+      throw Exception("Failed to get album with status code ${response.statusCode} and reason ${response.reasonPhrase}");
+    }
+  }
+
+  static Future<bool> getCurrentUser() async {
     var authToken = await SpotifyAuthTokens.readTokens();
     final response = await http.get(
       Uri.parse(SpotifyAuth.getCurrUser), headers: { HttpHeaders.authorizationHeader: "Bearer ${authToken?.accessToken}"});
@@ -36,14 +52,18 @@ class AppleMusicAuth {
     if (response.statusCode == 200) {
       //return User.fromJson(json.decode(response.body));
       print(json.decode(response.body));
-      return SpotifyUser();
+      return true;
     } else {
       throw Exception(
           'Failed to get user with status code ${response.statusCode}');
     }
   }
 
-  static Future<SpotifyUser?> appleMusicAuth() async {
+  static void storeUserToken(userToken) {
+   AppleMusicAuthTokens.fromString(userToken);
+  }
+
+  static Future<bool> appleMusicAuth() async {
     const redirectUri = "musicmatcher:/";
     const state = "spotifyState";
 
@@ -63,7 +83,7 @@ class AppleMusicAuth {
     
     } on Exception catch (e) {
       print(e);
-      return null;
+      return false;
     }
   }
 

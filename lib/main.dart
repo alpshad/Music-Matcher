@@ -12,12 +12,11 @@ import 'package:music_matcher/spotify/spotify-auth.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:stream_chat_flutter/stream_chat_flutter.dart';
+import 'apple-music/apple-music-auth.dart';
 import 'firebase_options.dart';
 import 'package:flutter_web_auth/flutter_web_auth.dart';
 
-import 'models/apple-music-user.dart';
 import 'models/spotify-auth-tokens.dart';
-import 'models/spotify-user.dart';
 
 import 'package:flutter/material.dart';
 import 'package:stream_chat_flutter/stream_chat_flutter.dart' as s;
@@ -32,8 +31,6 @@ enum ApplicationLoginState {
 
 bool userLoggedIn = false;
 UserCredential? user;
-SpotifyUser? spotifyUser;
-AppleMusicUser? appleMusicUser;
 
 Future main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -48,24 +45,6 @@ Future main() async {
         userLoggedIn = false;
       }
     });
-
-  /*
-  var userId = "";
-  String? email = "";
-  email = FirebaseAuth.instance.currentUser?.email;
-
-  if(email == "alpshadow@gmail.com" || email == "thecatnamedwinter@gmail.com"){
-    userId = "Amy";
-  }
-  else if(email == "mariov7757@gmail.com"){
-    userId = "Mario";
-  }
-  else if(email == "ziruihuang@email.arizona.edu"){
-    userId = "Ray";
-  } else if(email == "amir.hya@gmail.com" || email == "amirtest1@gmail.com"){
-    userId = "Amir";
-  }
-  */
 
   /// Create a new instance of [StreamChatClient] passing the apikey obtained from your
   /// project dashboard.
@@ -100,7 +79,7 @@ class MyApp extends StatelessWidget {
         // is not restarted.
         primarySwatch: Colors.blue,
       ),
-      initialRoute: '/',
+      initialRoute: '/login',
       routes: {
         '/': (context) => HomeScreen(client: client),
         '/login': (context) => LoginScreen(title: "Music Matcher", client: client),
@@ -119,7 +98,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreen extends State<HomeScreen> {
-  //static const platform = MethodChannel('apple-music.musicmatcher/auth');
+  static const platform = MethodChannel('apple-music.musicmatcher/auth');
+  bool spotifyConnected = false;
+  bool appleMusicConnected = false;
 
   @override
   void initState(){
@@ -208,9 +189,10 @@ class _HomeScreen extends State<HomeScreen> {
                     ]
                 )
             ),
-            if (spotifyUser != null)
+            if (spotifyConnected)
               // Spotify connected
-              const Text("hello world")
+              // Grab data from spotify
+              const Text("Spotify Connected")
             else
               Container(
                 padding: const EdgeInsets.all(0),
@@ -230,17 +212,18 @@ class _HomeScreen extends State<HomeScreen> {
                         child: Text("Connect Account"),
                         onPressed: () async {
                           // Connect to spotify
-                          spotifyUser = await SpotifyAuth.spotifyAuth();
-                          setState(() => { spotifyUser != null });
+                          await SpotifyAuth.spotifyAuth();
+                          setState(() => { spotifyConnected = true });
                         },
                       )
                     )
                   ]
                 )
               ),
-            if (appleMusicUser != null)
+            if (appleMusicConnected)
               // Apple Music connected
-              const Text("hello world")
+              // Grab Apple Music data
+              const Text("Apple Music Connected")
             else
               Container(
                 padding: const EdgeInsets.all(0),
@@ -261,9 +244,12 @@ class _HomeScreen extends State<HomeScreen> {
                         onPressed: () async {
                           // Connect to Apple Music
                           try {
-                            //appleMusicUser = await platform.invokeMethod('appleMusicAuth');
-                            setState(() => { appleMusicUser != null });
-                          } on PlatformException catch (e) {
+                            String userToken = await platform.invokeMethod('appleMusicAuth');
+                            AppleMusicAuth.storeUserToken(userToken);
+                            setState(() => { appleMusicConnected = true });
+                            await AppleMusicAuth.getAlbum();
+                            print("album gotten");
+                          } on PlatformException {
                             print("Error connecting to Apple Music");
                           }
                         },
@@ -271,7 +257,11 @@ class _HomeScreen extends State<HomeScreen> {
                     )
                   ]
                 )
-              )
+              ),
+            Container(
+              padding: const EdgeInsets.all(0),
+              // Profile Widget
+            )
           ]
         )
       )
