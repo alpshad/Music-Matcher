@@ -247,7 +247,7 @@ class _HomeScreen extends State<HomeScreen> {
                             String userToken = await platform.invokeMethod('appleMusicAuth');
                             AppleMusicAuth.storeUserToken(userToken);
                             setState(() => { appleMusicConnected = true });
-                            await AppleMusicAuth.getAlbum();
+                            await AppleMusicAuth.getUserData();
                             print("album gotten");
                           } on PlatformException {
                             print("Error connecting to Apple Music");
@@ -261,6 +261,9 @@ class _HomeScreen extends State<HomeScreen> {
             Container(
               padding: const EdgeInsets.all(0),
               // Profile Widget
+              // Profiles
+                // Info: Name, Photo (if implemented), age, general location/distance, similar music taste? (grab artists from db for you and them, compare)
+                // SPOTIFY INFO: /me/top/{artists} using time_range long_term and short_term
             )
           ]
         )
