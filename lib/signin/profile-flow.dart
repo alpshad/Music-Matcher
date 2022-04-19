@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../main.dart';
 import '../models/user.dart';
+import 'package:stream_chat_flutter/stream_chat_flutter.dart' as s;
+
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({Key? key, ProfileScreen}) : super(key: key);
+  final s.StreamChatClient client;
+  const ProfileScreen({Key? key, ProfileScreen, required this.client}) : super(key: key);
 
   @override
   State<ProfileScreen> createState() => _ProfileScreen();
@@ -68,6 +71,12 @@ class _ProfileScreen extends State<ProfileScreen> {
 
                         return 'Date of Birth Required';
                       }
+
+                      if (!new RegExp("[0-9]{2}/[0-9]{2}/[0-9]{4}").hasMatch(value)) {
+                        setState(() => creationError = "");
+
+                        return 'Incorrect Format: mm/dd/yyyy';
+                      }
                       return null;
                     },
                     controller: dateController,
@@ -101,7 +110,7 @@ class _ProfileScreen extends State<ProfileScreen> {
                           print("Profile Created");
                           Navigator.pushReplacement(context, 
                             MaterialPageRoute(builder: (context) {
-                              return HomeScreen();
+                              return HomeScreen(client: widget.client,);
                             })
                           );
                         }

@@ -1,3 +1,4 @@
+import 'dart:ffi';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -8,13 +9,14 @@ import 'package:music_matcher/signin/profile-flow.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_web_auth/flutter_web_auth.dart';
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 import '../main.dart';
 
 UserCredential? user;
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key, required this.title}) : super(key: key);
+  LoginScreen({Key? key, required this.title, required this.client}) : super(key: key);
   
 
   // This widget is the home page of your application. It is stateful, meaning
@@ -27,6 +29,7 @@ class LoginScreen extends StatefulWidget {
   // always marked "final".
 
   final String title;
+  final StreamChatClient client;
 
   @override
   State<LoginScreen> createState() => _LoginScreen();
@@ -58,11 +61,6 @@ class _LoginScreen extends State<LoginScreen> {
       loginError = "Error";
       return true;
     }
-  }
-
-  @override 
-  Future<void> resetPassword(String email) async {
-    await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
   }
 
   @override
@@ -135,10 +133,9 @@ class _LoginScreen extends State<LoginScreen> {
                 TextButton(
                   onPressed: () async {
                     //forgot password screen
-                    await resetPassword(FirebaseAuth.instance.currentUser?.email ?? "");
                     Navigator.pushReplacement(context,
                       MaterialPageRoute(builder: (context) {
-                        return ForgotPasswordScreen();
+                        return ForgotPasswordScreen(client: widget.client);
                       })
                     );
                   },
@@ -161,7 +158,7 @@ class _LoginScreen extends State<LoginScreen> {
                             print("Signed in");
                             Navigator.pushReplacement(context, 
                               MaterialPageRoute(builder: (context) {
-                                return HomeScreen();
+                                return HomeScreen(client: widget.client);
                               })
                             );
                           }
@@ -192,7 +189,7 @@ class _LoginScreen extends State<LoginScreen> {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(builder: (context) {
-                        return SignupScreen();
+                        return SignupScreen(client: widget.client);
                       }),
                     );
                     //signup screen
@@ -209,8 +206,10 @@ class _LoginScreen extends State<LoginScreen> {
 }
 
 class SignupScreen extends StatefulWidget {
-  const SignupScreen({Key? key}) : super(key: key);
-  
+  SignupScreen({Key? key, required this.client}) : super(key: key);
+
+  final StreamChatClient client;
+
   @override
   State<SignupScreen> createState() => _SignupScreen();
 }
@@ -225,7 +224,7 @@ class _SignupScreen extends State<SignupScreen> {
     try {
       UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: username,
-        password: password
+        password: password,
       );
 
       user = userCredential;
@@ -261,7 +260,7 @@ class _SignupScreen extends State<SignupScreen> {
                   // Sign out
                   Navigator.pushReplacement(context, 
                     MaterialPageRoute(builder: (context) {
-                      return LoginScreen(title: "Music Matcher");
+                      return LoginScreen(title: "Music Matcher", client: widget.client);
                     })
                   );
                 }
@@ -339,7 +338,8 @@ class _SignupScreen extends State<SignupScreen> {
                             // Signed in
                             Navigator.pushReplacement(context, 
                               MaterialPageRoute(builder: (context) {
-                                return ProfileScreen();
+                                // return HomeScreen(client: widget.client);
+                                return ProfileScreen(client: widget.client);
                               })
                             );
                           }
@@ -370,7 +370,7 @@ class _SignupScreen extends State<SignupScreen> {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(builder: (context) {
-                        return const LoginScreen(title: "Music Matcher");
+                        return LoginScreen(title: "Music Matcher", client: widget.client);
                       }),
                     );
                     //signup screen
@@ -387,13 +387,24 @@ class _SignupScreen extends State<SignupScreen> {
 }
 
 class ForgotPasswordScreen extends StatefulWidget {
-  const ForgotPasswordScreen({Key? key}) : super(key: key);
+  final StreamChatClient client;
+  const ForgotPasswordScreen({Key? key, required this.client}) : super(key: key);
   
   @override
   State<ForgotPasswordScreen> createState() => _ForgotPasswordScreen();
 }
 
 class _ForgotPasswordScreen extends State<ForgotPasswordScreen> {
+  TextEditingController emailController = TextEditingController();
+  bool sent = false;
+  final _formKey = GlobalKey<FormState>();
+  String error = "";
+
+  @override 
+  Future<void> resetPassword(String email) async {
+    await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -409,7 +420,7 @@ class _ForgotPasswordScreen extends State<ForgotPasswordScreen> {
                   // Sign out
                   Navigator.pushReplacement(context, 
                     MaterialPageRoute(builder: (context) {
-                      return LoginScreen(title: "Music Matcher");
+                      return LoginScreen(title: "Music Matcher", client: widget.client);
                     })
                   );
                 }
@@ -419,18 +430,67 @@ class _ForgotPasswordScreen extends State<ForgotPasswordScreen> {
               alignment: Alignment.center,
               padding: const EdgeInsets.all(10),
               child: const Text(
-                'Email Sent!',
+                'Forgot Password',
                 style: TextStyle(
                     color: Colors.blue,
                     fontWeight: FontWeight.w500,
                     fontSize: 30),
-              )),
-          Container(
+              )
+            ),
+          if (!sent)
+            Form(
+              key: _formKey,
+              child: Column(
+                children: <Widget> [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    child: TextFormField(
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          setState(() => error = "");
+
+                          return 'Email Required';
+                        }
+                        return null;
+                      },
+                      controller: emailController,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        labelText: 'Email',
+                      ),
+                    ),
+                  ),
+                  Container(
+                    height: 50,
+                    padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+                    child: ElevatedButton(
+                      child: const Text('Send Reset Email'),
+                      onPressed: () async {
+                        if (_formKey.currentState!.validate()) {
+                          // Log in
+                          await resetPassword(emailController.text);
+                          setState(() {
+                            sent = true;
+                          });
+                        }
+                      }
+                    ),
+                  ),
+                  Text(error, 
+                    style: TextStyle(
+                      color: Colors.red
+                    ),
+                  ),
+                ]
+              ),
+            )
+          else
+            Container(
               alignment: Alignment.center,
               padding: const EdgeInsets.all(10),
               child: Text(
-                'A password reset email was sent to ${FirebaseAuth.instance.currentUser?.email}',
-                style: TextStyle(fontSize: 20),
+                'A password reset email was sent to ${emailController.text}',
+                style: TextStyle(fontSize: 15),
               )),
         ])
       )

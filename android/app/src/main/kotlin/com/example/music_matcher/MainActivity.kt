@@ -31,6 +31,7 @@ class MainActivity: FlutterActivity() {
 
                 //Thread waiting = new Thread()
                 //result.success(authenticationManager.handleTokenResult(startActivityForResult(intent, 1)))
+
                 //result.success(userToken)
 
             } else {
