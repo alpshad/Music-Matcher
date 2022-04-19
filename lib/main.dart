@@ -9,10 +9,11 @@ import 'package:music_matcher/chat/chat-flow.dart';
 import 'package:music_matcher/models/Stream-Api-User.dart';
 import 'package:music_matcher/signin/signin-flow.dart';
 import 'package:music_matcher/spotify/spotify-auth.dart';
+import 'package:music_matcher/spotify/spotify-profile.dart';
+
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:stream_chat_flutter/stream_chat_flutter.dart';
-import 'apple-music/apple-music-auth.dart';
 import 'firebase_options.dart';
 import 'package:flutter_web_auth/flutter_web_auth.dart';
 
@@ -20,6 +21,7 @@ import 'models/spotify-auth-tokens.dart';
 
 import 'package:flutter/material.dart';
 import 'package:stream_chat_flutter/stream_chat_flutter.dart' as s;
+import 'spotify/spotify-user.dart';
 
 enum ApplicationLoginState {
   loggedOut,
@@ -31,6 +33,8 @@ enum ApplicationLoginState {
 
 bool userLoggedIn = false;
 UserCredential? user;
+SpotifyUser? spotifyUser;
+
 
 Future main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -189,10 +193,19 @@ class _HomeScreen extends State<HomeScreen> {
                     ]
                 )
             ),
-            if (spotifyConnected)
+            if (spotifyUser != null)
               // Spotify connected
               // Grab data from spotify
-              const Text("Spotify Connected")
+              ElevatedButton(
+                  child: const Text("View Spotify Profile"),
+                  onPressed:() async {
+                    // Sign out
+                    Navigator.pushReplacement(context,
+                        MaterialPageRoute(builder: (context) {
+                          return spotifyProfileScreen(spotifyProfile:spotifyUser);
+                        })
+                    );
+                  })
             else
               Container(
                 padding: const EdgeInsets.all(0),
@@ -212,46 +225,8 @@ class _HomeScreen extends State<HomeScreen> {
                         child: Text("Connect Account"),
                         onPressed: () async {
                           // Connect to spotify
-                          await SpotifyAuth.spotifyAuth();
-                          setState(() => { spotifyConnected = true });
-                        },
-                      )
-                    )
-                  ]
-                )
-              ),
-            if (appleMusicConnected)
-              // Apple Music connected
-              // Grab Apple Music data
-              const Text("Apple Music Connected")
-            else
-              Container(
-                padding: const EdgeInsets.all(0),
-                child: ListView(
-                  shrinkWrap: true,
-                  children: <Widget>[
-                    Container(
-                      // Spotify not connected
-                      padding: const EdgeInsets.all(10),
-                      child: const Text("Connect to your Apple Music account to start matching!", textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500, fontSize: 24),
-                      )
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      child: ElevatedButton(
-                        child: Text("Connect Account"),
-                        onPressed: () async {
-                          // Connect to Apple Music
-                          try {
-                            String userToken = await platform.invokeMethod('appleMusicAuth');
-                            AppleMusicAuth.storeUserToken(userToken);
-                            setState(() => { appleMusicConnected = true });
-                            await AppleMusicAuth.getAlbum();
-                            print("album gotten");
-                          } on PlatformException {
-                            print("Error connecting to Apple Music");
-                          }
+                          spotifyUser = await SpotifyAuth.spotifyAuth();
+                          setState(() => { spotifyUser != null  });
                         },
                       )
                     )

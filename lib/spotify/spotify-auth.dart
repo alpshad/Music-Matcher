@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:flutter/foundation.dart';
+import 'package:music_matcher/spotify/spotify-user.dart';
 
 import '../models/spotify-auth-tokens.dart';
 
@@ -47,24 +48,27 @@ class SpotifyAuth {
   static String getCurrUser = 'https://api.spotify.com/v1/me';
 
 
-  static Future<bool> getCurrentUser() async {
+  static Future<SpotifyUser> getCurrentUser() async {
     var authToken = await SpotifyAuthTokens.readTokens();
     final response = await http.get(
-      Uri.parse(SpotifyAuth.getCurrUser), headers: { HttpHeaders.authorizationHeader: "Bearer ${authToken?.accessToken}"});
+        Uri.parse(SpotifyAuth.getCurrUser), headers: { HttpHeaders.authorizationHeader: "Bearer ${authToken?.accessToken}"});
 
     print(response.headers);
 
     if (response.statusCode == 200) {
       //return User.fromJson(json.decode(response.body));
       print(json.decode(response.body));
-      return true;
+
+      print(json.decode(response.body)['product']);
+
+      return SpotifyUser(json.decode(response.body)['display_name'],json.decode(response.body)['email'],json.decode(response.body)['country']);
     } else {
       throw Exception(
           'Failed to get user with status code ${response.statusCode}');
     }
   }
 
-  static Future<bool?> spotifyAuth() async {
+  static Future<SpotifyUser?> spotifyAuth() async {
     const redirectUri = "musicmatcher:/";
     const state = "spotifyState";
 
@@ -81,13 +85,12 @@ class SpotifyAuth {
       await tokens.saveTokens();
 
       return await SpotifyAuth.getCurrentUser();
-    
+
     } on Exception catch (e) {
       print(e);
       return null;
     }
   }
-
   static Future<SpotifyAuthTokens> getSpotifyAuthTokens(String? code, String redirectUri) async {
     var base64Cred = utf8.fuse(base64).encode('$spotifyClientID:$spotifyClientSecret');
     var response = await http.post(Uri.parse(SpotifyAuth.reqToken), body: {
