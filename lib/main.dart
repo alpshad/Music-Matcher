@@ -6,6 +6,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
 import 'package:music_matcher/chat/chat-flow.dart';
+import 'package:music_matcher/geolocations/nearby-friends-flow.dart';
 import 'package:music_matcher/models/Stream-Api-User.dart';
 import 'package:music_matcher/signin/signin-flow.dart';
 import 'package:music_matcher/spotify/spotify-auth.dart';
@@ -258,6 +259,31 @@ class _HomeScreen extends State<HomeScreen> {
                   ]
                 )
               ),
+            Container(
+                padding: const EdgeInsets.all(0),
+                child: ListView(
+                    shrinkWrap: true,
+                    children: <Widget>[
+                      Container(
+                          padding: const EdgeInsets.all(10),
+                          child: const Text("Nearby Friends!", textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.green, fontWeight: FontWeight.w500, fontSize: 24),
+                          )
+                      ),
+                      Container(
+                          padding: const EdgeInsets.all(10),
+                          child: ElevatedButton(
+                            child: Text("Explore"),
+                            onPressed: () async {
+                              Navigator.of(context).push(MaterialPageRoute(builder: (_) =>
+                              ChannelsBloc(child: StreamChat(client: widget.client, child: NearbyFriendsScreen(client: widget.client)),
+                              )));
+                            },
+                          )
+                      )
+                    ]
+                )
+            ),
             Container(
               padding: const EdgeInsets.all(0),
               // Profile Widget
