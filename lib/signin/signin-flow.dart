@@ -41,6 +41,19 @@ class _LoginScreen extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   String loginError = "";
 
+  @override
+  void initState() {
+    super.initState();
+    
+    if (FirebaseAuth.instance.currentUser != null) {
+      Navigator.pushReplacement(context, 
+        MaterialPageRoute(builder: (context) {
+          return HomeScreen(client: widget.client);
+        })
+      );
+    }
+  }
+
   Future<bool> login(String username, String password) async {
     try {
       UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
