@@ -73,18 +73,6 @@ class _NearbyFriendsScreenState extends State<NearbyFriendsScreen> {
           center: center, radius: 1.6 * rad, field: 'position', strictMode: true);
     });
 
-    // _firestore.collection('geolocations').get().then((snapshot) {
-    //   for (DocumentSnapshot ds in snapshot.docs){
-    //     ds.reference.delete();
-    //   }});
-    //
-    _firestore
-        .collection('geolocations')
-        .add({'name': 'James', 'position': geo.point(latitude: 32.28480489100139, longitude: -110.94488968029498)},
-    ).then((_) {
-      ;
-    });
-
   }
 
   void _onMapCreated(GoogleMapController _cntlr)
@@ -169,7 +157,7 @@ class _NearbyFriendsScreenState extends State<NearbyFriendsScreen> {
     );
   }
 
-  _addMarker(double lat, double lng, String name) async {
+  _addMarker(double lat, double lng, String name, Map<String, dynamic> data) async {
     BitmapDescriptor markerbitmap = await BitmapDescriptor.fromAssetImage(
       ImageConfiguration(),
       r"C:\Users\Raymond\StudioProjects\Music-Matcher\assets\images\assets\images\user.png",
@@ -185,7 +173,7 @@ class _NearbyFriendsScreenState extends State<NearbyFriendsScreen> {
       onTap: (){
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => s.ChannelsBloc(child: s.StreamChat(client: widget.client, child: NearbyFriendsProfile(client: widget.client)))),
+          MaterialPageRoute(builder: (context) => s.ChannelsBloc(child: s.StreamChat(client: widget.client, child: NearbyFriendsProfile(client: widget.client, data: data,)))),
         );
       }
     );
@@ -207,7 +195,7 @@ class _NearbyFriendsScreenState extends State<NearbyFriendsScreen> {
     documentList.forEach((DocumentSnapshot document) {
       final data = document.data() as Map<String, dynamic>;
       final GeoPoint point = data['position']['geopoint'];
-      _addMarker(point.latitude, point.longitude, data['name']);
+      _addMarker(point.latitude, point.longitude, data['name'], data);
     });
   }
 
@@ -259,7 +247,8 @@ class _NearbyFriendsScreenState extends State<NearbyFriendsScreen> {
 
 class NearbyFriendsProfile extends StatelessWidget {
   final s.StreamChatClient client;
-  const NearbyFriendsProfile({Key? key, HomeScreen, required this.client}) : super(key: key);
+  final Map<String, dynamic> data;
+  NearbyFriendsProfile({Key? key, HomeScreen, required this.client, required this.data}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -276,8 +265,7 @@ class NearbyFriendsProfile extends StatelessWidget {
                 Image(
                   height: MediaQuery.of(context).size.height / 3,
                   fit: BoxFit.cover,
-                  image: const NetworkImage(
-                      'https://www.worldatlas.com/r/w768/upload/07/b4/c5/blues.jpg'),
+                  image: NetworkImage(data['backgroundimage']),
                 ),
                 Positioned(
                     bottom: -50.0,
@@ -286,8 +274,7 @@ class NearbyFriendsProfile extends StatelessWidget {
                       backgroundColor: Colors.black,
                       child: CircleAvatar(
                         radius: 75,
-                        backgroundImage: NetworkImage(
-                            'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&q=80'),
+                        backgroundImage: NetworkImage(data['image']),
                       ),
                     ))
               ]),
@@ -295,13 +282,12 @@ class NearbyFriendsProfile extends StatelessWidget {
             height: 45,
           ),
           ListTile(
-            title: Center(child: Text('John')),
-            subtitle: Center(child: Text('Rhythm and blues')),
+            title: Center(child: Text(data['name'])),
+            subtitle: Center(child: Text(data['genres'])),
           ),
           ListTile(
             title: Text('About me'),
-            subtitle: Text(
-                'I like Rhythm and blues'),
+            subtitle: Text(data['aboutme']),
           ),
           SizedBox(
             height: 20,
