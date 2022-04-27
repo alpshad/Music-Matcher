@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:geoflutterfire/geoflutterfire.dart';
@@ -7,10 +9,9 @@ import 'package:location/location.dart';
 import 'dart:async';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/cupertino.dart';
-import 'dart:ui';
+import 'dart:ui' as ui;
 import 'package:stream_chat_flutter/stream_chat_flutter.dart' as s;
 import 'package:music_matcher/chat/chat-flow.dart';
-import 'package:music_matcher/models/Stream-Api-User.dart';
 
 /// // ...
 /// await Firebase.initializeApp(
@@ -19,29 +20,82 @@ import 'package:music_matcher/models/Stream-Api-User.dart';
 /// ```
 ///
 ///
-// void main() async {
-//   WidgetsFlutterBinding.ensureInitialized();
-//   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-//   // await Geolocator.requestPermission();
-//   runApp(MaterialApp(
-//     title: 'Geo Flutter Fire example',
-//     home: NearbyFriendsScreen(),
-//     debugShowCheckedModeBanner: false,
-//   ));
-// }
+class _FriendListItem extends StatelessWidget {
+  final DocumentSnapshot document;
+  late Map<String, dynamic> data;
+  late s.StreamChatClient client;
+
+  _FriendListItem(this.document, this.client){
+    data = document.data() as Map<String, dynamic>;
+    client = client;
+  }
+
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+        leading: CircleAvatar(
+            radius: 30.0,
+            backgroundImage: NetworkImage(data['image']),
+            backgroundColor: Colors.transparent
+        ),
+        title: Text(data['name']),
+        subtitle: Text(data['genres']),
+        onTap: (){
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => s.ChannelsBloc(child: s.StreamChat(client: client, child: NearbyFriendsProfile(client: client, data: data,)))),
+          );
+        }
+    );
+  }
+
+}
+
+class FriendsList extends StatelessWidget {
+  final List<DocumentSnapshot> documentList;
+  final s.StreamChatClient client;
+
+  FriendsList(this.documentList, this.client);
+
+  @override
+  Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    return ConstrainedBox(
+        constraints: BoxConstraints(
+        minHeight: mediaQuery.size.width - 30,
+        maxHeight: mediaQuery.size.height * (1 / 2),
+        ),
+     child:ListView(
+        shrinkWrap: true,
+        padding: EdgeInsets.symmetric(vertical: 8.0),
+        children: _buildFriendsList()
+    ),
+    );
+  }
+
+  List<_FriendListItem> _buildFriendsList() {
+    return documentList.map((document) => _FriendListItem(document, client))
+        .toList();
+  }
+
+}
 
 class NearbyFriendsScreen extends StatefulWidget {
   const NearbyFriendsScreen({Key? key, required this.client}) : super(key: key);
   final s.StreamChatClient client;
   @override
-  _NearbyFriendsScreenState createState() => _NearbyFriendsScreenState();
+  _NearbyFriendsScreenState createState() => _NearbyFriendsScreenState(client);
 }
 
 class _NearbyFriendsScreenState extends State<NearbyFriendsScreen> {
   LocationData? _currentPosition;
-  GoogleMapController? _mapController;
   TextEditingController? _latitudeController, _longitudeController;
   Location location = Location();
+  List<DocumentSnapshot> _document = [];
+  final s.StreamChatClient client;
+
+  _NearbyFriendsScreenState(this.client);
 
   GoogleMapController? _controller;
   LatLng _initialcameraposition = const LatLng(32.23193637129737, -110.94996986837795);
@@ -90,6 +144,7 @@ class _NearbyFriendsScreenState extends State<NearbyFriendsScreen> {
     });
     stream.listen((List<DocumentSnapshot> documentList) {
       _updateMarkers(documentList);
+      _document = documentList;
     });
   }
 
@@ -123,7 +178,7 @@ class _NearbyFriendsScreenState extends State<NearbyFriendsScreen> {
                   margin: EdgeInsets.symmetric(vertical: 8),
                   child: SizedBox(
                     width: mediaQuery.size.width - 30,
-                    height: mediaQuery.size.height * (2 / 3),
+                    height: mediaQuery.size.height * (1 / 4),
                     child:GoogleMap(
                         initialCameraPosition: CameraPosition(target: _initialcameraposition,
                         zoom: 15),
@@ -137,6 +192,7 @@ class _NearbyFriendsScreenState extends State<NearbyFriendsScreen> {
                   ),
                 ),
               ),
+              FriendsList(_document, client),
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
                 child: Slider(
@@ -192,6 +248,7 @@ class _NearbyFriendsScreenState extends State<NearbyFriendsScreen> {
   }
 
   void _updateMarkers(List<DocumentSnapshot> documentList) {
+    _document = documentList;
     documentList.forEach((DocumentSnapshot document) {
       final data = document.data() as Map<String, dynamic>;
       final GeoPoint point = data['position']['geopoint'];
