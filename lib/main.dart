@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
@@ -7,6 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
 import 'package:music_matcher/chat/chat-flow.dart';
 import 'package:music_matcher/models/Stream-Api-User.dart';
+import 'package:music_matcher/models/user.dart' as u;
 import 'package:music_matcher/signin/signin-flow.dart';
 import 'package:music_matcher/spotify/spotify-auth.dart';
 import 'package:provider/provider.dart';
@@ -105,29 +107,22 @@ class _HomeScreen extends State<HomeScreen> {
   @override
   void initState(){
     super.initState();
-    var userId = "";
-    String? email = "";
-    email = FirebaseAuth.instance.currentUser?.email;
-
-    if(email == "alpshadow@gmail.com" || email == "thecatnamedwinter@gmail.com"){
-      userId = "Amy";
-    }
-    else if(email == "mariov7757@gmail.com"){
-      userId = "Mario";
-    }
-    else if(email == "ziruihuang@email.arizona.edu"){
-      userId = "Ray";
-    }
-    else if(email == "amir.hya@gmail.com" || email == "amirtest1@gmail.com"){
-      userId = "Amir";
-    }
-
-    widget.client.connectUser(
-      s.User(id: userId),
-      widget.client.devToken(userId).rawValue,
-    ).then((result)=> print("finished"));
-
+    String uid = FirebaseAuth.instance.currentUser!.uid;
+    u.User.getUserData(uid).then((userData) => {
+          setupStreamChat(userData)
+    });
   }
+
+  void setupStreamChat(Map<String, dynamic> userData){
+    print("userdata is " + userData.toString());
+    String birthdate = userData["date_of_birth"]!.replaceAll("/", "-");
+    String streamChatUserId = userData["name"]! + birthdate;
+    widget.client.connectUser(
+      s.User(id: streamChatUserId),
+      widget.client.devToken(streamChatUserId).rawValue,
+    ).then((result)=> print("finished"));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -19,6 +20,16 @@ class User {
     return users.add({'name': name, "userId": user?.uid, "date_of_birth": birthdate, 'bio': bio})
       .then((value) => print("User added"))
       .catchError((error) => print("Failed to add user"));
+  }
+
+  static Future<Map<String, dynamic>> getUserData(String uid) async{
+    var uid = FirebaseAuth.instance.currentUser!.uid;
+    var snapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .limit(1)
+        .where('userId', isEqualTo: uid)
+        .get();
+    return snapshot.docs[0].data();
   }
 
   

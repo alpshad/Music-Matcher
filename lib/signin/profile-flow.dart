@@ -21,6 +21,9 @@ class _ProfileScreen extends State<ProfileScreen> {
   String creationError = "";
 
   Future<void> createProfile(String name, String birthdate, String bio) {
+    String date_of_birth = birthdate.replaceAll("/", "-");
+    s.User streamchatuser =  s.User(id: name + date_of_birth);
+    widget.client.updateUser(streamchatuser);
     User user = User(name, birthdate, bio);
     return user.storeUser();
   }
