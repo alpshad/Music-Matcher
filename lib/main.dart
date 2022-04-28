@@ -107,10 +107,12 @@ class _HomeScreen extends State<HomeScreen> {
   @override
   void initState(){
     super.initState();
-    String uid = FirebaseAuth.instance.currentUser!.uid;
-    u.User.getUserData(uid).then((userData) => {
-          setupStreamChat(userData)
-    });
+    if(userLoggedIn){
+      String uid = FirebaseAuth.instance.currentUser!.uid;
+      u.User.getUserData(uid).then((userData) => {
+        setupStreamChat(userData)
+      });
+    }
   }
 
   void setupStreamChat(Map<String, dynamic> userData){
