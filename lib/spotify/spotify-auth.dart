@@ -39,13 +39,18 @@ class SpotifyAuth {
   ];
 
   static String reqAuth(String clientId, String redirectUri, String state) {
-    print(scopes.join('%20'));
+    //print(scopes.join('%20'));
     return 'https://accounts.spotify.com/authorize?response_type=code&client_id=$clientId&scope=${scopes.join('%20')}&redirect_uri=$redirectUri&state=$state';
   }
 
   static String reqToken = 'https://accounts.spotify.com/api/token';
   static String getCurrUser = 'https://api.spotify.com/v1/me';
 
+  static Future<void> getUserData() async {
+    //print("Getting S data");
+    await getHeavyRotation();
+    await getRecentArtists();
+  }
 
   static Future<bool> getCurrentUser() async {
     var authToken = await SpotifyAuthTokens.readTokens();
@@ -122,6 +127,67 @@ class SpotifyAuth {
       return SpotifyAuthTokens.fromJson(responseBody);
     } else {
       throw Exception('Failed to refresh token with status code ${response.statusCode}');
+    }
+  }
+
+  static Future<void> getRecentArtists() async {
+    var authToken = await SpotifyAuthTokens.readTokens();
+    String data = await callEndpoint(authToken, "https://api.spotify.com/v1/me/player/recently-played?limit=10");
+    List<String> artists = List.empty(growable: true);
+    Map<String, dynamic> decodedData = jsonDecode(data);
+    for (var item in decodedData['items']) {
+      //print("item");
+      //print(item);
+      for (var artist in item['track']['artists']) {
+        if (!artists.contains(artist['name'])) {
+          artists.add(artist['name']);
+        }
+      }
+    }
+
+    //print(artists);
+
+    var user = FirebaseAuth.instance.currentUser;
+    CollectionReference users = FirebaseFirestore.instance.collection('users');
+    QuerySnapshot doc = await users.where('userId', isEqualTo: user?.uid).get();
+    DocumentReference ref = doc.docs[0].reference;
+    await ref.update({'spotify_recent': artists})
+      .then((_) => print("Updated"))
+      .catchError((error) => print("Error"));
+  }
+
+  static Future<void> getHeavyRotation() async {
+    var authToken = await SpotifyAuthTokens.readTokens();
+    var data = await callEndpoint(authToken, "https://api.spotify.com/v1/me/top/artists?limit=10");
+    List<String> artists = List.empty(growable: true);
+    Map<String, dynamic> decodedData = jsonDecode(data);
+    //print("data");
+    //print(data);
+    for (var item in decodedData['items']) {
+      for (var artist in item['track']['artists']) {
+        if (!artists.contains(artist['name'])) {
+          artists.add(artist['name']);
+        }
+      }
+    }
+
+    var user = FirebaseAuth.instance.currentUser;
+    CollectionReference users = FirebaseFirestore.instance.collection('users');
+    QuerySnapshot doc = await users.where('userId', isEqualTo: user?.uid).get();
+    DocumentReference ref = doc.docs[0].reference;
+    await ref.update({'spotify_favorite': artists})
+      .then((_) => print("Updated"))
+      .catchError((error) => print("Error"));
+  }
+
+  static Future<String> callEndpoint(SpotifyAuthTokens? authToken, String url) async {
+    final response = await http.get(Uri.parse(url), headers: { HttpHeaders.authorizationHeader: "Bearer ${authToken?.accessToken}"});
+    
+    if (response.statusCode == 200) {
+      //print(json.decode(response.body));
+      return response.body;
+    } else {
+      throw Exception("Failed to get data with status code ${response.statusCode} and reason ${response.reasonPhrase}");
     }
   }
 }

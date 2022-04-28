@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -132,7 +133,94 @@ class _HomeScreen extends State<HomeScreen> {
       s.User(id: userId),
       widget.client.devToken(userId).rawValue,
     ).then((result)=> print("finished"));
+
+    SpotifyAuthTokens.readTokens()
+    .then((result) => {
+      if (result != null) {
+        SpotifyAuthTokens.updateToken()
+        .then(
+          (result) => SpotifyAuth.getUserData().then((result) => {
+            print("Finished S data")
+          })
+        )
+      }
+    });
+
+    AppleMusicAuthTokens.readTokens()
+    .then((result) => {
+      if (result != null) {
+        AppleMusicAuth.getUserData()
+        .then(
+            (result) => print("Finished AM data")
+        )
+      }
+    });
   }
+
+  Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>> getSimilarUsers() async {
+    var userData = await FirebaseFirestore.instance
+                    .collection('users')
+                    .where('userId', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
+                    .get();
+    var userRef = userData.docs[0];
+    List<String> recentArtists = List.empty(growable: true);
+    var userRecent = await userRef.get('apple_recent');
+    for (String stupid in userRecent) {
+      recentArtists.add(stupid);
+    }
+    
+    userRecent = await userRef.get('spotify_recent');
+    for (String stupid in userRecent) {
+      recentArtists.add(stupid);
+    }
+
+    List<String> topArtists = List.empty(growable: true);
+    var userFavs = await userRef.get('apple_favorite');
+    for (String stupid in userFavs) {
+      topArtists.add(stupid);
+    }
+
+    userFavs = await userRef.get('spotify_favorite');
+    for (String stupid in userFavs) {
+      topArtists.add(stupid);
+    }
+
+    recentArtists = recentArtists.take(10).toList();
+    topArtists = topArtists.take(10).toList();
+
+    print(recentArtists);
+    var appleRecents = await FirebaseFirestore.instance
+              .collection('users')
+              .where('userId', isNotEqualTo: FirebaseAuth.instance.currentUser?.uid)
+              .where('apple_recent', arrayContainsAny: recentArtists)
+              .limit(10).get();
+    var spotRecents = await FirebaseFirestore.instance
+              .collection('users')
+              .where('userId', isNotEqualTo: FirebaseAuth.instance.currentUser?.uid)
+              .where('spotify_recent', arrayContainsAny: recentArtists)
+              .limit(10).get();
+    var appleFavs = await FirebaseFirestore.instance
+              .collection('users')
+              .where('userId', isNotEqualTo: FirebaseAuth.instance.currentUser?.uid)
+              .where('apple_favorite', arrayContainsAny: topArtists)
+              .limit(10).get();
+    var spotFavs = await FirebaseFirestore.instance
+              .collection('users')
+              .where('userId', isNotEqualTo: FirebaseAuth.instance.currentUser?.uid)
+              .where('spotify_favorite', arrayContainsAny: topArtists)
+              .limit(10)
+              .get();
+    var docs = appleRecents.docs;
+    docs.addAll(spotRecents.docs);
+    docs.addAll(appleFavs.docs);
+    docs.addAll(spotFavs.docs);
+    final ids = Set();
+    docs.retainWhere((x) => ids.add(x.get('userId')));
+    print(docs.length);
+    return docs;
+    // Also filter by nearby locations
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -201,6 +289,16 @@ class _HomeScreen extends State<HomeScreen> {
                 Widget? child;
                 if (snapshot.connectionState == ConnectionState.done) {
                   if (snapshot.data != null) {
+                    // print("Spotify token not null");
+                    // FutureBuilder<void>(
+                    //   future: getSpotifyDataWhenLoggedIn,
+                    //   builder: (BuildContext context, AsyncSnapshot<void> snapshot) {
+                    //     print("Token updated");
+
+                    //     return const SizedBox(height: 10);
+                    //   }
+                    // );
+
                     child = const SizedBox(height: 10);
                   } else {
                     child = Container(
@@ -222,6 +320,7 @@ class _HomeScreen extends State<HomeScreen> {
                               onPressed: () async {
                                 // Connect to spotify
                                 await SpotifyAuth.spotifyAuth();
+                                await SpotifyAuth.getUserData();
                                 setState(() => { spotifyConnected = true });
                               },
                             )
@@ -251,6 +350,13 @@ class _HomeScreen extends State<HomeScreen> {
                 Widget? child;
                 if (snapshot.connectionState == ConnectionState.done) {
                   if (snapshot.data != null) {
+                    // FutureBuilder<void>(
+                    //   future: AppleMusicAuth.getUserData(),
+                    //   builder: (BuildContext context, AsyncSnapshot<void> snapshot) {
+                    //     return const SizedBox(height: 10);
+                    //   }
+                    // );
+
                     child = const SizedBox(height: 10);
                   } else {
                     child = Container(
@@ -301,18 +407,15 @@ class _HomeScreen extends State<HomeScreen> {
               }
               
             ),
-            FutureBuilder<QuerySnapshot?>(
+            FutureBuilder<List<QueryDocumentSnapshot?>>(
               // Other Users
-              future: FirebaseFirestore.instance
-                        .collection('users')
-                        .limit(10)
-                        .get(),
-              builder: (BuildContext context, AsyncSnapshot<QuerySnapshot?> snapshot) {
+              future: getSimilarUsers(),
+              builder: (BuildContext context, AsyncSnapshot<List<QueryDocumentSnapshot?>> snapshot) {
                 List<Widget> children;
                 if (snapshot.connectionState == ConnectionState.done) {
                   children = [];
                   if (snapshot.data != null) {
-                    for (var doc in snapshot.data!.docs) {
+                    for (var doc in snapshot.data!) {
                       children.add(Container(
                         padding: const EdgeInsets.all(0),
                         child: ListView(
@@ -333,7 +436,7 @@ class _HomeScreen extends State<HomeScreen> {
                                       color: Color.fromARGB(255, 255, 249, 232)
                                     ),
                                     padding: const EdgeInsets.all(10),
-                                    child: Text(doc.get('name'), textAlign: TextAlign.center,
+                                    child: Text(doc!.get('name'), textAlign: TextAlign.center,
                                       style: TextStyle(color: Colors.blue, fontWeight: FontWeight.w500, fontSize: 24),
                                     )
                                   ),
@@ -373,10 +476,14 @@ class _HomeScreen extends State<HomeScreen> {
                                             style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
                                           )
                                         ),
-                                        for(String artist in doc.get('recent'))
+                                        for(String artist in doc.get('apple_recent'))
                                           Text(artist, textAlign: TextAlign.center,
                                             style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
-                                          )
+                                          ),
+                                        for(String artist in doc.get('spotify_recent'))
+                                        Text(artist, textAlign: TextAlign.center,
+                                          style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+                                        )
                                       ]
                                     )
                                   ),
@@ -396,7 +503,11 @@ class _HomeScreen extends State<HomeScreen> {
                                             style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
                                           )
                                         ),
-                                        for(String artist in doc.get('favorite'))
+                                        for(String artist in doc.get('apple_favorite'))
+                                          Text(artist, textAlign: TextAlign.center,
+                                            style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+                                          ),
+                                        for(String artist in doc.get('spotify_favorite'))
                                           Text(artist, textAlign: TextAlign.center,
                                             style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
                                           )

@@ -30,6 +30,7 @@ class AppleMusicAuth {
   //static String userToken = '';
 
   static Future<void> getUserData() async {
+    //print("Getting AM data");
     var authToken = await AppleMusicAuthTokens.readTokens() as String;
     await getHeavyRotation(authToken);
     await getRecentArtists(authToken);
@@ -57,7 +58,7 @@ class AppleMusicAuth {
     CollectionReference users = FirebaseFirestore.instance.collection('users');
     QuerySnapshot doc = await users.where('userId', isEqualTo: user?.uid).get();
     DocumentReference ref = doc.docs[0].reference;
-    await ref.update({'recent': artists})
+    await ref.update({'apple_recent': artists})
       .then((_) => print("Updated"))
       .catchError((error) => print("Error"));
   }
@@ -78,7 +79,7 @@ class AppleMusicAuth {
     CollectionReference users = FirebaseFirestore.instance.collection('users');
     QuerySnapshot doc = await users.where('userId', isEqualTo: user?.uid).get();
     DocumentReference ref = doc.docs[0].reference;
-    await ref.update({'favorite': artists})
+    await ref.update({'apple_favorite': artists})
       .then((_) => print("Updated"))
       .catchError((error) => print("Error"));
   }
