@@ -45,5 +45,7 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Music Matcher uses your location to match you with nearby users.</string>
 </dict>
 </plist>

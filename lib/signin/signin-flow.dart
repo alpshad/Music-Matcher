@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:music_matcher/signin/profile-flow.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
@@ -46,11 +47,14 @@ class _LoginScreen extends State<LoginScreen> {
     super.initState();
     
     if (FirebaseAuth.instance.currentUser != null) {
-      Navigator.pushReplacement(context, 
-        MaterialPageRoute(builder: (context) {
-          return HomeScreen(client: widget.client);
-        })
-      );
+      SchedulerBinding.instance?.addPostFrameCallback((_) {
+        Navigator.pushReplacement(context, 
+          MaterialPageRoute(builder: (context) {
+            return HomeScreen(client: widget.client);
+          })
+        );
+      });
+      
     }
   }
 

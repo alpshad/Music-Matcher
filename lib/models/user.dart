@@ -16,10 +16,8 @@ class User {
   Future<void> storeUser() {
     var user = FirebaseAuth.instance.currentUser;
     CollectionReference users = FirebaseFirestore.instance.collection('users');
-    return users.add({'name': name, "userId": user?.uid, "date_of_birth": birthdate, 'bio': bio, 'apple_favorite': List.empty(growable: true), 'spotify_favorite': List.empty(growable: true), 'apple_recent': List.empty(growable: true), 'spotify_recent': List.empty(growable: true)})
+    return users.add({'name': name, "userId": user?.uid, "date_of_birth": birthdate, 'bio': bio, 'apple_favorite': List.empty(growable: true), 'spotify_favorite': List.empty(growable: true), 'apple_recent': List.empty(growable: true), 'spotify_recent': List.empty(growable: true), 'friend_ids': List.empty(growable: true)})
       .then((value) => print("User added"))
       .catchError((error) => print("Failed to add user"));
   }
-
-  
 }

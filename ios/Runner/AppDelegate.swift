@@ -2,6 +2,7 @@ import UIKit
 import Flutter
 import MusicKit
 import StoreKit
+import GoogleMaps
 
 @UIApplicationMain
 @objc class AppDelegate: FlutterAppDelegate {
@@ -40,6 +41,7 @@ import StoreKit
           })
       
     GeneratedPluginRegistrant.register(with: self)
+    GMSServices.provideAPIKey("AIzaSyC70Eha5nebcTZ260AghPwcU7HqdaZpcLE");
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
     

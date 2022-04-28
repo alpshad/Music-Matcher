@@ -21,6 +21,7 @@ import 'firebase_options.dart';
 import 'package:flutter_web_auth/flutter_web_auth.dart';
 import 'package:age_calculator/age_calculator.dart';
 
+import 'geolocations/nearby-friends-flow.dart';
 import 'models/spotify-auth-tokens.dart';
 
 import 'package:flutter/material.dart';
@@ -157,6 +158,38 @@ class _HomeScreen extends State<HomeScreen> {
     });
   }
 
+  Future<void> addFriend(String id) async {
+    var user = FirebaseAuth.instance.currentUser;
+    CollectionReference users = FirebaseFirestore.instance.collection('users');
+    QuerySnapshot doc = await users.where('userId', isEqualTo: user?.uid).get();
+    DocumentReference ref = doc.docs[0].reference;
+    List<String> friends = doc.docs[0].get('friend_ids');
+    friends.add(id);
+
+    await ref.update({'friend_ids': friends})
+      .then((_) => print("Updated"))
+      .catchError((error) => print("Error"));
+  }
+
+  Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>> getFriends() async {
+    var userData = await FirebaseFirestore.instance
+                    .collection('users')
+                    .where('userId', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
+                    .get();
+    var userRef = userData.docs[0];
+    List<String> friends = List.empty(growable: true);
+    var userFriends = await userRef.get("friend_ids");
+    for (String friend in userFriends) {
+      friends.add(friend);
+    }
+
+    var friendDocs = await FirebaseFirestore.instance
+                      .collection('users')
+                      .where('userId', whereIn: friends)
+                      .get();
+    return friendDocs.docs;
+  }
+
   Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>> getSimilarUsers() async {
     var userData = await FirebaseFirestore.instance
                     .collection('users')
@@ -282,6 +315,31 @@ class _HomeScreen extends State<HomeScreen> {
                     ]
                 )
             ),
+            Container(
+                 padding: const EdgeInsets.all(0),
+                 child: ListView(
+                     shrinkWrap: true,
+                     children: <Widget>[
+                       Container(
+                           padding: const EdgeInsets.all(10),
+                           child: const Text("Nearby Friends!", textAlign: TextAlign.center,
+                             style: TextStyle(color: Colors.green, fontWeight: FontWeight.w500, fontSize: 24),
+                           )
+                       ),
+                       Container(
+                           padding: const EdgeInsets.all(10),
+                           child: ElevatedButton(
+                             child: Text("Explore"),
+                             onPressed: () async {
+                               Navigator.of(context).push(MaterialPageRoute(builder: (_) =>
+                               ChannelsBloc(child: StreamChat(client: widget.client, child: NearbyFriendsScreen(client: widget.client)),
+                               )));
+                             },
+                           )
+                       )
+                     ]
+                 )
+             ),
             FutureBuilder<SpotifyAuthTokens?>(
               // Spotify
               future: SpotifyAuthTokens.readTokens(),
@@ -407,6 +465,147 @@ class _HomeScreen extends State<HomeScreen> {
               }
               
             ),
+            // FutureBuilder<List<QueryDocumentSnapshot?>>(
+            //   // Other Users
+            //   future: getFriends(),
+            //   builder: (BuildContext context, AsyncSnapshot<List<QueryDocumentSnapshot?>> snapshot) {
+            //     List<Widget> children;
+            //     if (snapshot.connectionState == ConnectionState.done) {
+            //       children = [];
+            //       if (snapshot.data != null) {
+            //         children.add(Container(
+            //           // Spotify not connected
+            //           padding: const EdgeInsets.all(10),
+            //           child: const Text("Your Friends", textAlign: TextAlign.center,
+            //             style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w500, fontSize: 24),
+            //           )
+            //         ));
+            //         for (var doc in snapshot.data!) {
+            //           children.add(Container(
+            //             padding: const EdgeInsets.all(0),
+            //             child: ListView(
+            //               shrinkWrap: true,
+            //               primary: false,
+            //               children: <Widget> [
+            //                 Container(
+            //                   decoration: const BoxDecoration(
+            //                     color: Colors.white
+            //                   ),
+            //                   padding: const EdgeInsets.all(10),
+            //                   child: ListView(
+            //                     shrinkWrap: true,
+            //                     primary: false,
+            //                     children: <Widget> [
+            //                       Container(
+            //                         decoration: const BoxDecoration(
+            //                           color: Color.fromARGB(255, 255, 249, 232)
+            //                         ),
+            //                         padding: const EdgeInsets.all(10),
+            //                         child: Text(doc!.get('name'), textAlign: TextAlign.center,
+            //                           style: TextStyle(color: Colors.blue, fontWeight: FontWeight.w500, fontSize: 24),
+            //                         )
+            //                       ),
+            //                       const SizedBox(height: 10),
+            //                       Container(
+            //                         decoration: const BoxDecoration(
+            //                           color: Color.fromARGB(255, 255, 249, 232)
+            //                         ),
+            //                         padding: const EdgeInsets.all(10),
+            //                         child: Text('${AgeCalculator.age(DateFormat('mm/dd/yyyy').parse(doc.get('date_of_birth'))).years.toString()} years old', textAlign: TextAlign.center,
+            //                           style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+            //                         )
+            //                       ),
+            //                       const SizedBox(height: 10),
+            //                       Container(
+            //                         decoration: const BoxDecoration(
+            //                           color: Color.fromARGB(255, 255, 249, 232)
+            //                         ),
+            //                         padding: const EdgeInsets.all(10),
+            //                         child: Text(doc.get('bio'), textAlign: TextAlign.center,
+            //                           style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+            //                         )
+            //                       ),
+            //                       const SizedBox(height: 10),
+            //                       Container(
+            //                         decoration: const BoxDecoration(
+            //                           color: Color.fromARGB(255, 255, 249, 232)
+            //                         ),
+            //                         padding: const EdgeInsets.all(10),
+            //                         child: ListView(
+            //                           shrinkWrap: true,
+            //                           primary: false,
+            //                           children: <Widget> [
+            //                             Container(
+            //                               padding: const EdgeInsets.all(10),
+            //                               child: Text('Recent Artists: ', textAlign: TextAlign.center,
+            //                                 style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+            //                               )
+            //                             ),
+            //                             for(String artist in doc.get('apple_recent'))
+            //                               Text(artist, textAlign: TextAlign.center,
+            //                                 style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+            //                               ),
+            //                             for(String artist in doc.get('spotify_recent'))
+            //                             Text(artist, textAlign: TextAlign.center,
+            //                               style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+            //                             )
+            //                           ]
+            //                         )
+            //                       ),
+            //                       const SizedBox(height: 10),
+            //                       Container(
+            //                         decoration: const BoxDecoration(
+            //                           color: Color.fromARGB(255, 255, 249, 232)
+            //                         ),
+            //                         padding: const EdgeInsets.all(10),
+            //                         child: ListView(
+            //                           shrinkWrap: true,
+            //                           primary: false,
+            //                           children: <Widget> [
+            //                             Container(
+            //                               padding: const EdgeInsets.all(10),
+            //                               child: Text('Favorite Artists: ', textAlign: TextAlign.center,
+            //                                 style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+            //                               )
+            //                             ),
+            //                             for(String artist in doc.get('apple_favorite'))
+            //                               Text(artist, textAlign: TextAlign.center,
+            //                                 style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+            //                               ),
+            //                             for(String artist in doc.get('spotify_favorite'))
+            //                               Text(artist, textAlign: TextAlign.center,
+            //                                 style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+            //                               )
+            //                           ]
+            //                         )
+            //                       ),
+            //                     ]
+            //                   )
+            //                   // SPOTIFY INFO: /me/top/{artists} using time_range long_term and short_term
+
+            //                 ),
+            //                 const SizedBox(height: 10),
+
+            //               ],
+            //             )
+            //           ));
+            //         }
+            //       }
+            //     } else {
+            //       children = <Widget> [
+            //         const SizedBox(
+            //           width: 60,
+            //           height: 60,
+            //           child: CircularProgressIndicator(),
+            //         )
+            //       ];
+            //     }
+            //     return Column(
+            //           children: children
+                    
+            //     );
+            //   }
+            // ),
             FutureBuilder<List<QueryDocumentSnapshot?>>(
               // Other Users
               future: getSimilarUsers(),
@@ -415,6 +614,13 @@ class _HomeScreen extends State<HomeScreen> {
                 if (snapshot.connectionState == ConnectionState.done) {
                   children = [];
                   if (snapshot.data != null) {
+                    children.add(Container(
+                      // Spotify not connected
+                      padding: const EdgeInsets.all(10),
+                      child: const Text("Connect With Similar Users", textAlign: TextAlign.center,
+                        style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w500, fontSize: 24),
+                      )
+                    ));
                     for (var doc in snapshot.data!) {
                       children.add(Container(
                         padding: const EdgeInsets.all(0),
@@ -522,6 +728,7 @@ class _HomeScreen extends State<HomeScreen> {
                                       child: const Text('Connect!'),
                                       onPressed: () async {
                                         // Connect
+                                        await addFriend(doc.get('userId'));
                                       }
                                     ),
                                   ),
