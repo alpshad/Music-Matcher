@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:geoflutterfire/geoflutterfire.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:music_matcher/models/geolocation.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:location/location.dart';
 import 'dart:async';
@@ -11,6 +12,7 @@ import 'dart:ui';
 import 'package:stream_chat_flutter/stream_chat_flutter.dart' as s;
 import 'package:music_matcher/chat/chat-flow.dart';
 import 'package:music_matcher/models/Stream-Api-User.dart';
+import 'package:music_matcher/models/geolocation.dart';
 
 /// // ...
 /// await Firebase.initializeApp(
@@ -63,11 +65,10 @@ class _NearbyFriendsScreenState extends State<NearbyFriendsScreen> {
     _latitudeController = TextEditingController();
     _longitudeController = TextEditingController();
     getLoc();
-
     center = geo.point(latitude: 32.23193637129737, longitude: -110.94996986837795);
 
     stream = radius.switchMap((rad) {
-      final collectionReference = _firestore.collection('geolocations');
+      final collectionReference = _firestore.collection('geolocations2');
 
       return geo.collection(collectionRef: collectionReference).within(
           center: center, radius: 1.6 * rad, field: 'position', strictMode: true);
@@ -78,18 +79,20 @@ class _NearbyFriendsScreenState extends State<NearbyFriendsScreen> {
     //     ds.reference.delete();
     //   }});
     //
+    /*
     _firestore
         .collection('geolocations')
         .add({'name': 'James', 'position': geo.point(latitude: 32.28480489100139, longitude: -110.94488968029498)},
     ).then((_) {
       ;
     });
+     */
 
   }
 
   void _onMapCreated(GoogleMapController _cntlr)
   {
-    _controller = _controller;
+    _controller = _cntlr;
     location.onLocationChanged.listen((l) {
       _controller!.animateCamera(
         CameraUpdate.newCameraPosition(
@@ -245,6 +248,9 @@ class _NearbyFriendsScreenState extends State<NearbyFriendsScreen> {
     }
 
     _currentPosition = await location.getLocation();
+    GeoPoint point = GeoPoint(_currentPosition!.latitude!, _currentPosition!.longitude!);
+    GeoLocation g = GeoLocation(point);
+    g.addOrUpdateGeoLocation();
     _initialcameraposition = LatLng(_currentPosition!.latitude!,_currentPosition!.longitude!);
     location.onLocationChanged.listen((LocationData currentLocation) {
       print("${currentLocation.longitude} : ${currentLocation.longitude}");
