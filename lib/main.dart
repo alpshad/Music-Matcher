@@ -183,11 +183,15 @@ class _HomeScreen extends State<HomeScreen> {
       friends.add(friend);
     }
 
-    var friendDocs = await FirebaseFirestore.instance
+    if (friends.isNotEmpty) {
+      var friendDocs = await FirebaseFirestore.instance
                       .collection('users')
                       .where('userId', whereIn: friends)
                       .get();
-    return friendDocs.docs;
+      return friendDocs.docs;
+    }
+    
+    return [];
   }
 
   Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>> getSimilarUsers() async {
@@ -196,6 +200,17 @@ class _HomeScreen extends State<HomeScreen> {
                     .where('userId', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
                     .get();
     var userRef = userData.docs[0];
+    var userFriends = await userRef.get('friend_ids');
+    List<String> friends = List.empty(growable: true);
+    for (String friend in userFriends) {
+      friends.add(friend);
+    }
+
+    friends.add(FirebaseAuth.instance.currentUser!.uid);
+    //friends.add('-1');
+    //friends.add(await userRef.get('userId'));
+    print(friends);
+
     List<String> recentArtists = List.empty(growable: true);
     var userRecent = await userRef.get('apple_recent');
     for (String stupid in userRecent) {
@@ -224,22 +239,22 @@ class _HomeScreen extends State<HomeScreen> {
     print(recentArtists);
     var appleRecents = await FirebaseFirestore.instance
               .collection('users')
-              .where('userId', isNotEqualTo: FirebaseAuth.instance.currentUser?.uid)
+              .where('userId', isNotEqualTo:  FirebaseAuth.instance.currentUser?.uid)
               .where('apple_recent', arrayContainsAny: recentArtists)
               .limit(10).get();
     var spotRecents = await FirebaseFirestore.instance
               .collection('users')
-              .where('userId', isNotEqualTo: FirebaseAuth.instance.currentUser?.uid)
+              .where('userId', isNotEqualTo:  FirebaseAuth.instance.currentUser?.uid)
               .where('spotify_recent', arrayContainsAny: recentArtists)
               .limit(10).get();
     var appleFavs = await FirebaseFirestore.instance
               .collection('users')
-              .where('userId', isNotEqualTo: FirebaseAuth.instance.currentUser?.uid)
+              .where('userId', isNotEqualTo:  FirebaseAuth.instance.currentUser?.uid)
               .where('apple_favorite', arrayContainsAny: topArtists)
               .limit(10).get();
     var spotFavs = await FirebaseFirestore.instance
               .collection('users')
-              .where('userId', isNotEqualTo: FirebaseAuth.instance.currentUser?.uid)
+              .where('userId', isNotEqualTo:  FirebaseAuth.instance.currentUser?.uid)
               .where('spotify_favorite', arrayContainsAny: topArtists)
               .limit(10)
               .get();
@@ -465,147 +480,147 @@ class _HomeScreen extends State<HomeScreen> {
               }
               
             ),
-            // FutureBuilder<List<QueryDocumentSnapshot?>>(
-            //   // Other Users
-            //   future: getFriends(),
-            //   builder: (BuildContext context, AsyncSnapshot<List<QueryDocumentSnapshot?>> snapshot) {
-            //     List<Widget> children;
-            //     if (snapshot.connectionState == ConnectionState.done) {
-            //       children = [];
-            //       if (snapshot.data != null) {
-            //         children.add(Container(
-            //           // Spotify not connected
-            //           padding: const EdgeInsets.all(10),
-            //           child: const Text("Your Friends", textAlign: TextAlign.center,
-            //             style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w500, fontSize: 24),
-            //           )
-            //         ));
-            //         for (var doc in snapshot.data!) {
-            //           children.add(Container(
-            //             padding: const EdgeInsets.all(0),
-            //             child: ListView(
-            //               shrinkWrap: true,
-            //               primary: false,
-            //               children: <Widget> [
-            //                 Container(
-            //                   decoration: const BoxDecoration(
-            //                     color: Colors.white
-            //                   ),
-            //                   padding: const EdgeInsets.all(10),
-            //                   child: ListView(
-            //                     shrinkWrap: true,
-            //                     primary: false,
-            //                     children: <Widget> [
-            //                       Container(
-            //                         decoration: const BoxDecoration(
-            //                           color: Color.fromARGB(255, 255, 249, 232)
-            //                         ),
-            //                         padding: const EdgeInsets.all(10),
-            //                         child: Text(doc!.get('name'), textAlign: TextAlign.center,
-            //                           style: TextStyle(color: Colors.blue, fontWeight: FontWeight.w500, fontSize: 24),
-            //                         )
-            //                       ),
-            //                       const SizedBox(height: 10),
-            //                       Container(
-            //                         decoration: const BoxDecoration(
-            //                           color: Color.fromARGB(255, 255, 249, 232)
-            //                         ),
-            //                         padding: const EdgeInsets.all(10),
-            //                         child: Text('${AgeCalculator.age(DateFormat('mm/dd/yyyy').parse(doc.get('date_of_birth'))).years.toString()} years old', textAlign: TextAlign.center,
-            //                           style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
-            //                         )
-            //                       ),
-            //                       const SizedBox(height: 10),
-            //                       Container(
-            //                         decoration: const BoxDecoration(
-            //                           color: Color.fromARGB(255, 255, 249, 232)
-            //                         ),
-            //                         padding: const EdgeInsets.all(10),
-            //                         child: Text(doc.get('bio'), textAlign: TextAlign.center,
-            //                           style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
-            //                         )
-            //                       ),
-            //                       const SizedBox(height: 10),
-            //                       Container(
-            //                         decoration: const BoxDecoration(
-            //                           color: Color.fromARGB(255, 255, 249, 232)
-            //                         ),
-            //                         padding: const EdgeInsets.all(10),
-            //                         child: ListView(
-            //                           shrinkWrap: true,
-            //                           primary: false,
-            //                           children: <Widget> [
-            //                             Container(
-            //                               padding: const EdgeInsets.all(10),
-            //                               child: Text('Recent Artists: ', textAlign: TextAlign.center,
-            //                                 style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
-            //                               )
-            //                             ),
-            //                             for(String artist in doc.get('apple_recent'))
-            //                               Text(artist, textAlign: TextAlign.center,
-            //                                 style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
-            //                               ),
-            //                             for(String artist in doc.get('spotify_recent'))
-            //                             Text(artist, textAlign: TextAlign.center,
-            //                               style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
-            //                             )
-            //                           ]
-            //                         )
-            //                       ),
-            //                       const SizedBox(height: 10),
-            //                       Container(
-            //                         decoration: const BoxDecoration(
-            //                           color: Color.fromARGB(255, 255, 249, 232)
-            //                         ),
-            //                         padding: const EdgeInsets.all(10),
-            //                         child: ListView(
-            //                           shrinkWrap: true,
-            //                           primary: false,
-            //                           children: <Widget> [
-            //                             Container(
-            //                               padding: const EdgeInsets.all(10),
-            //                               child: Text('Favorite Artists: ', textAlign: TextAlign.center,
-            //                                 style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
-            //                               )
-            //                             ),
-            //                             for(String artist in doc.get('apple_favorite'))
-            //                               Text(artist, textAlign: TextAlign.center,
-            //                                 style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
-            //                               ),
-            //                             for(String artist in doc.get('spotify_favorite'))
-            //                               Text(artist, textAlign: TextAlign.center,
-            //                                 style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
-            //                               )
-            //                           ]
-            //                         )
-            //                       ),
-            //                     ]
-            //                   )
-            //                   // SPOTIFY INFO: /me/top/{artists} using time_range long_term and short_term
+            FutureBuilder<List<QueryDocumentSnapshot?>>(
+              // Other Users
+              future: getFriends(),
+              builder: (BuildContext context, AsyncSnapshot<List<QueryDocumentSnapshot?>> snapshot) {
+                List<Widget> children;
+                if (snapshot.connectionState == ConnectionState.done) {
+                  children = [];
+                  if (snapshot.data != null) {
+                    children.add(Container(
+                      // Spotify not connected
+                      padding: const EdgeInsets.all(10),
+                      child: const Text("Your Friends", textAlign: TextAlign.center,
+                        style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w500, fontSize: 24),
+                      )
+                    ));
+                    for (var doc in snapshot.data!) {
+                      children.add(Container(
+                        padding: const EdgeInsets.all(0),
+                        child: ListView(
+                          shrinkWrap: true,
+                          primary: false,
+                          children: <Widget> [
+                            Container(
+                              decoration: const BoxDecoration(
+                                color: Colors.white
+                              ),
+                              padding: const EdgeInsets.all(10),
+                              child: ListView(
+                                shrinkWrap: true,
+                                primary: false,
+                                children: <Widget> [
+                                  Container(
+                                    decoration: const BoxDecoration(
+                                      color: Color.fromARGB(255, 255, 249, 232)
+                                    ),
+                                    padding: const EdgeInsets.all(10),
+                                    child: Text(doc!.get('name'), textAlign: TextAlign.center,
+                                      style: TextStyle(color: Colors.blue, fontWeight: FontWeight.w500, fontSize: 24),
+                                    )
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    decoration: const BoxDecoration(
+                                      color: Color.fromARGB(255, 255, 249, 232)
+                                    ),
+                                    padding: const EdgeInsets.all(10),
+                                    child: Text('${AgeCalculator.age(DateFormat('mm/dd/yyyy').parse(doc.get('date_of_birth'))).years.toString()} years old', textAlign: TextAlign.center,
+                                      style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+                                    )
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    decoration: const BoxDecoration(
+                                      color: Color.fromARGB(255, 255, 249, 232)
+                                    ),
+                                    padding: const EdgeInsets.all(10),
+                                    child: Text(doc.get('bio'), textAlign: TextAlign.center,
+                                      style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+                                    )
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    decoration: const BoxDecoration(
+                                      color: Color.fromARGB(255, 255, 249, 232)
+                                    ),
+                                    padding: const EdgeInsets.all(10),
+                                    child: ListView(
+                                      shrinkWrap: true,
+                                      primary: false,
+                                      children: <Widget> [
+                                        Container(
+                                          padding: const EdgeInsets.all(10),
+                                          child: Text('Recent Artists: ', textAlign: TextAlign.center,
+                                            style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+                                          )
+                                        ),
+                                        for(String artist in doc.get('apple_recent'))
+                                          Text(artist, textAlign: TextAlign.center,
+                                            style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+                                          ),
+                                        for(String artist in doc.get('spotify_recent'))
+                                        Text(artist, textAlign: TextAlign.center,
+                                          style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+                                        )
+                                      ]
+                                    )
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    decoration: const BoxDecoration(
+                                      color: Color.fromARGB(255, 255, 249, 232)
+                                    ),
+                                    padding: const EdgeInsets.all(10),
+                                    child: ListView(
+                                      shrinkWrap: true,
+                                      primary: false,
+                                      children: <Widget> [
+                                        Container(
+                                          padding: const EdgeInsets.all(10),
+                                          child: Text('Favorite Artists: ', textAlign: TextAlign.center,
+                                            style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+                                          )
+                                        ),
+                                        for(String artist in doc.get('apple_favorite'))
+                                          Text(artist, textAlign: TextAlign.center,
+                                            style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+                                          ),
+                                        for(String artist in doc.get('spotify_favorite'))
+                                          Text(artist, textAlign: TextAlign.center,
+                                            style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+                                          )
+                                      ]
+                                    )
+                                  ),
+                                ]
+                              )
+                              // SPOTIFY INFO: /me/top/{artists} using time_range long_term and short_term
 
-            //                 ),
-            //                 const SizedBox(height: 10),
+                            ),
+                            const SizedBox(height: 10),
 
-            //               ],
-            //             )
-            //           ));
-            //         }
-            //       }
-            //     } else {
-            //       children = <Widget> [
-            //         const SizedBox(
-            //           width: 60,
-            //           height: 60,
-            //           child: CircularProgressIndicator(),
-            //         )
-            //       ];
-            //     }
-            //     return Column(
-            //           children: children
+                          ],
+                        )
+                      ));
+                    }
+                  }
+                } else {
+                  children = <Widget> [
+                    const SizedBox(
+                      width: 60,
+                      height: 60,
+                      child: CircularProgressIndicator(),
+                    )
+                  ];
+                }
+                return Column(
+                      children: children
                     
-            //     );
-            //   }
-            // ),
+                );
+              }
+            ),
             FutureBuilder<List<QueryDocumentSnapshot?>>(
               // Other Users
               future: getSimilarUsers(),
@@ -728,7 +743,7 @@ class _HomeScreen extends State<HomeScreen> {
                                       child: const Text('Connect!'),
                                       onPressed: () async {
                                         // Connect
-                                        await addFriend(doc.get('userId'));
+                                        //await addFriend(doc.get('userId'));
                                       }
                                     ),
                                   ),
