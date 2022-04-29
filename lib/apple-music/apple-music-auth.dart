@@ -30,25 +30,66 @@ class AppleMusicAuth {
   //static String userToken = '';
 
   static Future<void> getUserData() async {
+    //print("Getting AM data");
     var authToken = await AppleMusicAuthTokens.readTokens() as String;
-    var data = await callEndpoint(authToken, "https://api.music.apple.com/v1/me/recent/played/tracks");
-    await storeData();
-    data = await callEndpoint(authToken, "https://api.music.apple.com/v1/me/history/heavy-rotation");
-    await storeData();
-    
-
+    await getHeavyRotation(authToken);
+    await getRecentArtists(authToken);
   }
 
   static Future<void> storeData() async {
     // Store for current firebase user
     // Store in tracks/artists collections under current user id
+    
   }
 
-  static Future<void> callEndpoint(String token, String url) async {
+  static Future<void> getRecentArtists(String token) async {
+    String data = await callEndpoint(token, "https://api.music.apple.com/v1/me/recent/played/tracks?limit=10");
+    List<String> artists = List.empty(growable: true);
+    Map<String, dynamic> decodedData = jsonDecode(data);
+    for (var item in decodedData['data']) {
+      if (item['attributes']['playParams']['kind'] != 'playlist') {
+        if (!artists.contains(item['attributes']['artistName'])) {
+          artists.add(item['attributes']['artistName']);
+        }
+      }
+    }
+
+    var user = FirebaseAuth.instance.currentUser;
+    CollectionReference users = FirebaseFirestore.instance.collection('users');
+    QuerySnapshot doc = await users.where('userId', isEqualTo: user?.uid).get();
+    DocumentReference ref = doc.docs[0].reference;
+    await ref.update({'apple_recent': artists})
+      .then((_) => print("Updated"))
+      .catchError((error) => print("Error"));
+  }
+
+  static Future<void> getHeavyRotation(String token) async {
+    var data = await callEndpoint(token, "https://api.music.apple.com/v1/me/history/heavy-rotation");
+    List<String> artists = List.empty(growable: true);
+    Map<String, dynamic> decodedData = jsonDecode(data);
+    for (var item in decodedData['data']) {
+      if (item['attributes']['playParams']['kind'] != 'playlist') {
+        if (!artists.contains(item['attributes']['artistName'])) {
+          artists.add(item['attributes']['artistName']);
+        }
+      }
+    }
+
+    var user = FirebaseAuth.instance.currentUser;
+    CollectionReference users = FirebaseFirestore.instance.collection('users');
+    QuerySnapshot doc = await users.where('userId', isEqualTo: user?.uid).get();
+    DocumentReference ref = doc.docs[0].reference;
+    await ref.update({'apple_favorite': artists})
+      .then((_) => print("Updated"))
+      .catchError((error) => print("Error"));
+  }
+
+  static Future<String> callEndpoint(String token, String url) async {
     final response = await http.get(Uri.parse(url), headers: { HttpHeaders.authorizationHeader: "Bearer $devToken", "Music-User-Token": token});
     
     if (response.statusCode == 200) {
-      print(json.decode(response.body));
+      //print(json.decode(response.body));
+      return response.body;
     } else {
       throw Exception("Failed to get data with status code ${response.statusCode} and reason ${response.reasonPhrase}");
     }

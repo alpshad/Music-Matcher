@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -6,9 +7,11 @@ import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:music_matcher/chat/chat-flow.dart';
 import 'package:music_matcher/models/Stream-Api-User.dart';
 import 'package:music_matcher/models/user.dart' as u;
+import 'package:music_matcher/models/apple-music-auth-tokens.dart';
 import 'package:music_matcher/signin/signin-flow.dart';
 import 'package:music_matcher/spotify/spotify-auth.dart';
 import 'package:provider/provider.dart';
@@ -17,7 +20,9 @@ import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 import 'apple-music/apple-music-auth.dart';
 import 'firebase_options.dart';
 import 'package:flutter_web_auth/flutter_web_auth.dart';
+import 'package:age_calculator/age_calculator.dart';
 
+import 'geolocations/nearby-friends-flow.dart';
 import 'models/spotify-auth-tokens.dart';
 
 import 'package:flutter/material.dart';
@@ -80,6 +85,7 @@ class MyApp extends StatelessWidget {
         // Notice that the counter didn't reset back to zero; the application
         // is not restarted.
         primarySwatch: Colors.blue,
+        scaffoldBackgroundColor: Color.fromARGB(255, 238, 238, 238)
       ),
       initialRoute: '/login',
       routes: {
@@ -103,9 +109,10 @@ class _HomeScreen extends State<HomeScreen> {
   static const platform = MethodChannel('apple-music.musicmatcher/auth');
   bool spotifyConnected = false;
   bool appleMusicConnected = false;
+  QuerySnapshot? query;
 
   @override
-  void initState(){
+  void initState() {
     super.initState();
     if(userLoggedIn){
       String uid = FirebaseAuth.instance.currentUser!.uid;
@@ -113,6 +120,28 @@ class _HomeScreen extends State<HomeScreen> {
         setupStreamChat(userData)
       });
     }
+
+    SpotifyAuthTokens.readTokens()
+        .then((result) => {
+      if (result != null) {
+        SpotifyAuthTokens.updateToken()
+            .then(
+                (result) => SpotifyAuth.getUserData().then((result) => {
+              print("Finished S data")
+            })
+        )
+      }
+    });
+
+    AppleMusicAuthTokens.readTokens()
+        .then((result) => {
+      if (result != null) {
+        AppleMusicAuth.getUserData()
+            .then(
+                (result) => print("Finished AM data")
+        )
+      }
+    });
   }
 
   void setupStreamChat(Map<String, dynamic> userData){
@@ -123,6 +152,102 @@ class _HomeScreen extends State<HomeScreen> {
       s.User(id: streamChatUserId),
       widget.client.devToken(streamChatUserId).rawValue,
     ).then((result)=> print("finished"));
+  }
+
+  Future<void> addFriend(String id) async {
+    var user = FirebaseAuth.instance.currentUser;
+    CollectionReference users = FirebaseFirestore.instance.collection('users');
+    QuerySnapshot doc = await users.where('userId', isEqualTo: user?.uid).get();
+    DocumentReference ref = doc.docs[0].reference;
+    List<String> friends = doc.docs[0].get('friend_ids');
+    friends.add(id);
+
+    await ref.update({'friend_ids': friends})
+      .then((_) => print("Updated"))
+      .catchError((error) => print("Error"));
+  }
+
+  Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>> getFriends() async {
+    var userData = await FirebaseFirestore.instance
+                    .collection('users')
+                    .where('userId', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
+                    .get();
+    var userRef = userData.docs[0];
+    List<String> friends = List.empty(growable: true);
+    var userFriends = await userRef.get("friend_ids");
+    for (String friend in userFriends) {
+      friends.add(friend);
+    }
+
+    var friendDocs = await FirebaseFirestore.instance
+                      .collection('users')
+                      .where('userId', whereIn: friends)
+                      .get();
+    return friendDocs.docs;
+  }
+
+  Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>> getSimilarUsers() async {
+    var userData = await FirebaseFirestore.instance
+                    .collection('users')
+                    .where('userId', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
+                    .get();
+    var userRef = userData.docs[0];
+    List<String> recentArtists = List.empty(growable: true);
+    var userRecent = await userRef.get('apple_recent');
+    for (String stupid in userRecent) {
+      recentArtists.add(stupid);
+    }
+    
+    userRecent = await userRef.get('spotify_recent');
+    for (String stupid in userRecent) {
+      recentArtists.add(stupid);
+    }
+
+    List<String> topArtists = List.empty(growable: true);
+    var userFavs = await userRef.get('apple_favorite');
+    for (String stupid in userFavs) {
+      topArtists.add(stupid);
+    }
+
+    userFavs = await userRef.get('spotify_favorite');
+    for (String stupid in userFavs) {
+      topArtists.add(stupid);
+    }
+
+    recentArtists = recentArtists.take(10).toList();
+    topArtists = topArtists.take(10).toList();
+
+    print(recentArtists);
+    var appleRecents = await FirebaseFirestore.instance
+              .collection('users')
+              .where('userId', isNotEqualTo: FirebaseAuth.instance.currentUser?.uid)
+              .where('apple_recent', arrayContainsAny: recentArtists)
+              .limit(10).get();
+    var spotRecents = await FirebaseFirestore.instance
+              .collection('users')
+              .where('userId', isNotEqualTo: FirebaseAuth.instance.currentUser?.uid)
+              .where('spotify_recent', arrayContainsAny: recentArtists)
+              .limit(10).get();
+    var appleFavs = await FirebaseFirestore.instance
+              .collection('users')
+              .where('userId', isNotEqualTo: FirebaseAuth.instance.currentUser?.uid)
+              .where('apple_favorite', arrayContainsAny: topArtists)
+              .limit(10).get();
+    var spotFavs = await FirebaseFirestore.instance
+              .collection('users')
+              .where('userId', isNotEqualTo: FirebaseAuth.instance.currentUser?.uid)
+              .where('spotify_favorite', arrayContainsAny: topArtists)
+              .limit(10)
+              .get();
+    var docs = appleRecents.docs;
+    docs.addAll(spotRecents.docs);
+    docs.addAll(appleFavs.docs);
+    docs.addAll(spotFavs.docs);
+    final ids = Set();
+    docs.retainWhere((x) => ids.add(x.get('userId')));
+    print(docs.length);
+    return docs;
+    // Also filter by nearby locations
   }
 
   @override
@@ -186,82 +311,450 @@ class _HomeScreen extends State<HomeScreen> {
                     ]
                 )
             ),
-            if (spotifyConnected)
-              // Spotify connected
-              // Grab data from spotify
-              const Text("Spotify Connected")
-            else
-              Container(
-                padding: const EdgeInsets.all(0),
-                child: ListView(
-                  shrinkWrap: true,
-                  children: <Widget>[
-                    Container(
-                      // Spotify not connected
-                      padding: const EdgeInsets.all(10),
-                      child: const Text("Connect to your Spotify account to start matching!", textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.green, fontWeight: FontWeight.w500, fontSize: 24),
-                      )
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      child: ElevatedButton(
-                        child: Text("Connect Account"),
-                        onPressed: () async {
-                          // Connect to spotify
-                          await SpotifyAuth.spotifyAuth();
-                          setState(() => { spotifyConnected = true });
-                        },
-                      )
-                    )
-                  ]
-                )
-              ),
-            if (appleMusicConnected)
-              // Apple Music connected
-              // Grab Apple Music data
-              const Text("Apple Music Connected")
-            else
-              Container(
-                padding: const EdgeInsets.all(0),
-                child: ListView(
-                  shrinkWrap: true,
-                  children: <Widget>[
-                    Container(
-                      // Spotify not connected
-                      padding: const EdgeInsets.all(10),
-                      child: const Text("Connect to your Apple Music account to start matching!", textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500, fontSize: 24),
-                      )
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      child: ElevatedButton(
-                        child: Text("Connect Account"),
-                        onPressed: () async {
-                          // Connect to Apple Music
-                          try {
-                            String userToken = await platform.invokeMethod('appleMusicAuth');
-                            AppleMusicAuth.storeUserToken(userToken);
-                            setState(() => { appleMusicConnected = true });
-                            await AppleMusicAuth.getUserData();
-                            print("album gotten");
-                          } on PlatformException {
-                            print("Error connecting to Apple Music");
-                          }
-                        },
-                      )
-                    )
-                  ]
-                )
-              ),
             Container(
-              padding: const EdgeInsets.all(0),
-              // Profile Widget
-              // Profiles
-                // Info: Name, Photo (if implemented), age, general location/distance, similar music taste? (grab artists from db for you and them, compare)
-                // SPOTIFY INFO: /me/top/{artists} using time_range long_term and short_term
-            )
+                 padding: const EdgeInsets.all(0),
+                 child: ListView(
+                     shrinkWrap: true,
+                     children: <Widget>[
+                       Container(
+                           padding: const EdgeInsets.all(10),
+                           child: const Text("Nearby Friends!", textAlign: TextAlign.center,
+                             style: TextStyle(color: Colors.green, fontWeight: FontWeight.w500, fontSize: 24),
+                           )
+                       ),
+                       Container(
+                           padding: const EdgeInsets.all(10),
+                           child: ElevatedButton(
+                             child: Text("Explore"),
+                             onPressed: () async {
+                               Navigator.of(context).push(MaterialPageRoute(builder: (_) =>
+                               ChannelsBloc(child: StreamChat(client: widget.client, child: NearbyFriendsScreen(client: widget.client)),
+                               )));
+                             },
+                           )
+                       )
+                     ]
+                 )
+             ),
+            FutureBuilder<SpotifyAuthTokens?>(
+              // Spotify
+              future: SpotifyAuthTokens.readTokens(),
+              builder: (BuildContext context, AsyncSnapshot<SpotifyAuthTokens?> snapshot) {
+                Widget? child;
+                if (snapshot.connectionState == ConnectionState.done) {
+                  if (snapshot.data != null) {
+                    // print("Spotify token not null");
+                    // FutureBuilder<void>(
+                    //   future: getSpotifyDataWhenLoggedIn,
+                    //   builder: (BuildContext context, AsyncSnapshot<void> snapshot) {
+                    //     print("Token updated");
+
+                    //     return const SizedBox(height: 10);
+                    //   }
+                    // );
+
+                    child = const SizedBox(height: 10);
+                  } else {
+                    child = Container(
+                      padding: const EdgeInsets.all(0),
+                      child: ListView(
+                        shrinkWrap: true,
+                        children: <Widget>[
+                          Container(
+                            // Spotify not connected
+                            padding: const EdgeInsets.all(10),
+                            child: const Text("Connect to your Spotify account to start matching!", textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.green, fontWeight: FontWeight.w500, fontSize: 24),
+                            )
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            child: ElevatedButton(
+                              child: Text("Connect Account"),
+                              onPressed: () async {
+                                // Connect to spotify
+                                await SpotifyAuth.spotifyAuth();
+                                await SpotifyAuth.getUserData();
+                                setState(() => { spotifyConnected = true });
+                              },
+                            )
+                          )
+                        ]
+                      )
+                    );
+                  }
+                } else {
+                  child = 
+                    const SizedBox(
+                      width: 10,
+                      height: 60,
+                      child: CircularProgressIndicator(),
+                    );
+                }
+                return Container(
+                  child: child
+                );
+              }
+              
+            ),
+            FutureBuilder<String?>(
+              // Apple Music
+              future: AppleMusicAuthTokens.readTokens(),
+              builder: (BuildContext context, AsyncSnapshot<String?> snapshot) {
+                Widget? child;
+                if (snapshot.connectionState == ConnectionState.done) {
+                  if (snapshot.data != null) {
+                    // FutureBuilder<void>(
+                    //   future: AppleMusicAuth.getUserData(),
+                    //   builder: (BuildContext context, AsyncSnapshot<void> snapshot) {
+                    //     return const SizedBox(height: 10);
+                    //   }
+                    // );
+
+                    child = const SizedBox(height: 10);
+                  } else {
+                    child = Container(
+                      padding: const EdgeInsets.all(0),
+                      child: ListView(
+                        shrinkWrap: true,
+                        children: <Widget>[
+                          Container(
+                            // Spotify not connected
+                            padding: const EdgeInsets.all(10),
+                            child: const Text("Connect to your Apple Music account to start matching!", textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500, fontSize: 24),
+                            )
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            child: ElevatedButton(
+                              child: Text("Connect Account"),
+                              onPressed: () async {
+                                // Connect to Apple Music
+                                try {
+                                  String userToken = await platform.invokeMethod('appleMusicAuth');
+                                  AppleMusicAuth.storeUserToken(userToken);
+                                  setState(() => { appleMusicConnected = true });
+                                  await AppleMusicAuth.getUserData();
+                                  print("album gotten");
+                                } on PlatformException {
+                                  print("Error connecting to Apple Music");
+                                }
+                              },
+                            )
+                          )
+                        ]
+                      )
+                    );
+                  }
+                } else {
+                  child = 
+                    const SizedBox(
+                      width: 60,
+                      height: 60,
+                      child: CircularProgressIndicator(),
+                    );
+                }
+                return Container(
+                  child: child
+                );
+              }
+              
+            ),
+            // FutureBuilder<List<QueryDocumentSnapshot?>>(
+            //   // Other Users
+            //   future: getFriends(),
+            //   builder: (BuildContext context, AsyncSnapshot<List<QueryDocumentSnapshot?>> snapshot) {
+            //     List<Widget> children;
+            //     if (snapshot.connectionState == ConnectionState.done) {
+            //       children = [];
+            //       if (snapshot.data != null) {
+            //         children.add(Container(
+            //           // Spotify not connected
+            //           padding: const EdgeInsets.all(10),
+            //           child: const Text("Your Friends", textAlign: TextAlign.center,
+            //             style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w500, fontSize: 24),
+            //           )
+            //         ));
+            //         for (var doc in snapshot.data!) {
+            //           children.add(Container(
+            //             padding: const EdgeInsets.all(0),
+            //             child: ListView(
+            //               shrinkWrap: true,
+            //               primary: false,
+            //               children: <Widget> [
+            //                 Container(
+            //                   decoration: const BoxDecoration(
+            //                     color: Colors.white
+            //                   ),
+            //                   padding: const EdgeInsets.all(10),
+            //                   child: ListView(
+            //                     shrinkWrap: true,
+            //                     primary: false,
+            //                     children: <Widget> [
+            //                       Container(
+            //                         decoration: const BoxDecoration(
+            //                           color: Color.fromARGB(255, 255, 249, 232)
+            //                         ),
+            //                         padding: const EdgeInsets.all(10),
+            //                         child: Text(doc!.get('name'), textAlign: TextAlign.center,
+            //                           style: TextStyle(color: Colors.blue, fontWeight: FontWeight.w500, fontSize: 24),
+            //                         )
+            //                       ),
+            //                       const SizedBox(height: 10),
+            //                       Container(
+            //                         decoration: const BoxDecoration(
+            //                           color: Color.fromARGB(255, 255, 249, 232)
+            //                         ),
+            //                         padding: const EdgeInsets.all(10),
+            //                         child: Text('${AgeCalculator.age(DateFormat('mm/dd/yyyy').parse(doc.get('date_of_birth'))).years.toString()} years old', textAlign: TextAlign.center,
+            //                           style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+            //                         )
+            //                       ),
+            //                       const SizedBox(height: 10),
+            //                       Container(
+            //                         decoration: const BoxDecoration(
+            //                           color: Color.fromARGB(255, 255, 249, 232)
+            //                         ),
+            //                         padding: const EdgeInsets.all(10),
+            //                         child: Text(doc.get('bio'), textAlign: TextAlign.center,
+            //                           style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+            //                         )
+            //                       ),
+            //                       const SizedBox(height: 10),
+            //                       Container(
+            //                         decoration: const BoxDecoration(
+            //                           color: Color.fromARGB(255, 255, 249, 232)
+            //                         ),
+            //                         padding: const EdgeInsets.all(10),
+            //                         child: ListView(
+            //                           shrinkWrap: true,
+            //                           primary: false,
+            //                           children: <Widget> [
+            //                             Container(
+            //                               padding: const EdgeInsets.all(10),
+            //                               child: Text('Recent Artists: ', textAlign: TextAlign.center,
+            //                                 style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+            //                               )
+            //                             ),
+            //                             for(String artist in doc.get('apple_recent'))
+            //                               Text(artist, textAlign: TextAlign.center,
+            //                                 style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+            //                               ),
+            //                             for(String artist in doc.get('spotify_recent'))
+            //                             Text(artist, textAlign: TextAlign.center,
+            //                               style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+            //                             )
+            //                           ]
+            //                         )
+            //                       ),
+            //                       const SizedBox(height: 10),
+            //                       Container(
+            //                         decoration: const BoxDecoration(
+            //                           color: Color.fromARGB(255, 255, 249, 232)
+            //                         ),
+            //                         padding: const EdgeInsets.all(10),
+            //                         child: ListView(
+            //                           shrinkWrap: true,
+            //                           primary: false,
+            //                           children: <Widget> [
+            //                             Container(
+            //                               padding: const EdgeInsets.all(10),
+            //                               child: Text('Favorite Artists: ', textAlign: TextAlign.center,
+            //                                 style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+            //                               )
+            //                             ),
+            //                             for(String artist in doc.get('apple_favorite'))
+            //                               Text(artist, textAlign: TextAlign.center,
+            //                                 style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+            //                               ),
+            //                             for(String artist in doc.get('spotify_favorite'))
+            //                               Text(artist, textAlign: TextAlign.center,
+            //                                 style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+            //                               )
+            //                           ]
+            //                         )
+            //                       ),
+            //                     ]
+            //                   )
+            //                   // SPOTIFY INFO: /me/top/{artists} using time_range long_term and short_term
+
+            //                 ),
+            //                 const SizedBox(height: 10),
+
+            //               ],
+            //             )
+            //           ));
+            //         }
+            //       }
+            //     } else {
+            //       children = <Widget> [
+            //         const SizedBox(
+            //           width: 60,
+            //           height: 60,
+            //           child: CircularProgressIndicator(),
+            //         )
+            //       ];
+            //     }
+            //     return Column(
+            //           children: children
+                    
+            //     );
+            //   }
+            // ),
+            FutureBuilder<List<QueryDocumentSnapshot?>>(
+              // Other Users
+              future: getSimilarUsers(),
+              builder: (BuildContext context, AsyncSnapshot<List<QueryDocumentSnapshot?>> snapshot) {
+                List<Widget> children;
+                if (snapshot.connectionState == ConnectionState.done) {
+                  children = [];
+                  if (snapshot.data != null) {
+                    children.add(Container(
+                      // Spotify not connected
+                      padding: const EdgeInsets.all(10),
+                      child: const Text("Connect With Similar Users", textAlign: TextAlign.center,
+                        style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w500, fontSize: 24),
+                      )
+                    ));
+                    for (var doc in snapshot.data!) {
+                      children.add(Container(
+                        padding: const EdgeInsets.all(0),
+                        child: ListView(
+                          shrinkWrap: true,
+                          primary: false,
+                          children: <Widget> [
+                            Container(
+                              decoration: const BoxDecoration(
+                                color: Colors.white
+                              ),
+                              padding: const EdgeInsets.all(10),
+                              child: ListView(
+                                shrinkWrap: true,
+                                primary: false,
+                                children: <Widget> [
+                                  Container(
+                                    decoration: const BoxDecoration(
+                                      color: Color.fromARGB(255, 255, 249, 232)
+                                    ),
+                                    padding: const EdgeInsets.all(10),
+                                    child: Text(doc!.get('name'), textAlign: TextAlign.center,
+                                      style: TextStyle(color: Colors.blue, fontWeight: FontWeight.w500, fontSize: 24),
+                                    )
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    decoration: const BoxDecoration(
+                                      color: Color.fromARGB(255, 255, 249, 232)
+                                    ),
+                                    padding: const EdgeInsets.all(10),
+                                    child: Text('${AgeCalculator.age(DateFormat('mm/dd/yyyy').parse(doc.get('date_of_birth'))).years.toString()} years old', textAlign: TextAlign.center,
+                                      style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+                                    )
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    decoration: const BoxDecoration(
+                                      color: Color.fromARGB(255, 255, 249, 232)
+                                    ),
+                                    padding: const EdgeInsets.all(10),
+                                    child: Text(doc.get('bio'), textAlign: TextAlign.center,
+                                      style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+                                    )
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    decoration: const BoxDecoration(
+                                      color: Color.fromARGB(255, 255, 249, 232)
+                                    ),
+                                    padding: const EdgeInsets.all(10),
+                                    child: ListView(
+                                      shrinkWrap: true,
+                                      primary: false,
+                                      children: <Widget> [
+                                        Container(
+                                          padding: const EdgeInsets.all(10),
+                                          child: Text('Recent Artists: ', textAlign: TextAlign.center,
+                                            style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+                                          )
+                                        ),
+                                        for(String artist in doc.get('apple_recent'))
+                                          Text(artist, textAlign: TextAlign.center,
+                                            style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+                                          ),
+                                        for(String artist in doc.get('spotify_recent'))
+                                        Text(artist, textAlign: TextAlign.center,
+                                          style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+                                        )
+                                      ]
+                                    )
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    decoration: const BoxDecoration(
+                                      color: Color.fromARGB(255, 255, 249, 232)
+                                    ),
+                                    padding: const EdgeInsets.all(10),
+                                    child: ListView(
+                                      shrinkWrap: true,
+                                      primary: false,
+                                      children: <Widget> [
+                                        Container(
+                                          padding: const EdgeInsets.all(10),
+                                          child: Text('Favorite Artists: ', textAlign: TextAlign.center,
+                                            style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+                                          )
+                                        ),
+                                        for(String artist in doc.get('apple_favorite'))
+                                          Text(artist, textAlign: TextAlign.center,
+                                            style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+                                          ),
+                                        for(String artist in doc.get('spotify_favorite'))
+                                          Text(artist, textAlign: TextAlign.center,
+                                            style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w200, fontSize: 16),
+                                          )
+                                      ]
+                                    )
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    height: 50,
+                                    padding: const EdgeInsets.fromLTRB(70, 0, 70, 10),
+                                    child: ElevatedButton(
+                                      child: const Text('Connect!'),
+                                      onPressed: () async {
+                                        // Connect
+                                        await addFriend(doc.get('userId'));
+                                      }
+                                    ),
+                                  ),
+                                ]
+                              )
+                              // SPOTIFY INFO: /me/top/{artists} using time_range long_term and short_term
+
+                            ),
+                            const SizedBox(height: 10),
+
+                          ],
+                        )
+                      ));
+                    }
+                  }
+                } else {
+                  children = <Widget> [
+                    const SizedBox(
+                      width: 60,
+                      height: 60,
+                      child: CircularProgressIndicator(),
+                    )
+                  ];
+                }
+                return Column(
+                      children: children
+                    
+                );
+              }
+            ),
           ]
         )
       )
