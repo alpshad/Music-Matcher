@@ -401,7 +401,7 @@ class NearbyFriendsProfile extends StatelessWidget {
             StreamApi.initUser(client, username: username, urlImage: url, id: id, token: client.devToken(id).rawValue);
             String birthdate = data["date_of_birth"]!.replaceAll("/", "-");
             String streamChatUserId = data["name"]! + birthdate;
-            final channel = await StreamApi.createChannel(client, type: "messaging", name: streamChatUserId, id: id, image: url, idMembers: [id, "Amir"]);
+            final channel = await StreamApi.createChannel(client, type: "messaging", name: streamChatUserId, id: id, image: url, idMembers: [id, streamChatUserId]);
             StreamApi.watchChannel(client, type: channel.type, id: channel!.id!);
 
 
