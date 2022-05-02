@@ -147,7 +147,7 @@ class _HomeScreen extends State<HomeScreen> {
   void setupStreamChat(Map<String, dynamic> userData){
     print("userdata is " + userData.toString());
     String birthdate = userData["date_of_birth"]!.replaceAll("/", "-");
-    String streamChatUserId = userData["name"]! + birthdate;
+    String streamChatUserId = userData["name"]!.replaceAll(" ", "") + birthdate;
     widget.client.connectUser(
       s.User(id: streamChatUserId),
       widget.client.devToken(streamChatUserId).rawValue,
@@ -159,11 +159,15 @@ class _HomeScreen extends State<HomeScreen> {
     CollectionReference users = FirebaseFirestore.instance.collection('users');
     QuerySnapshot doc = await users.where('userId', isEqualTo: user?.uid).get();
     DocumentReference ref = doc.docs[0].reference;
-    List<String> friends = doc.docs[0].get('friend_ids');
+    // List<String> friends = List.empty(growable: true);
+    // for (String friendId in doc.docs[0].get('friend_ids')) {
+    //   friends.add(friendId);
+    // }
+    List<dynamic> friends = doc.docs[0].get('friend_ids');
     friends.add(id);
 
     await ref.update({'friend_ids': friends})
-      .then((_) => print("Updated"))
+      .then((_) => setState(() => {}))
       .catchError((error) => print("Error"));
   }
 
@@ -740,7 +744,7 @@ class _HomeScreen extends State<HomeScreen> {
                                       child: const Text('Connect!'),
                                       onPressed: () async {
                                         // Connect
-                                        //await addFriend(doc.get('userId'));
+                                        await addFriend(doc.get('userId'));
                                       }
                                     ),
                                   ),
