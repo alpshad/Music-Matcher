@@ -1,3 +1,4 @@
+import 'dart:html';
 import 'dart:typed_data';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -12,6 +13,9 @@ import 'package:flutter/cupertino.dart';
 import 'dart:ui' as ui;
 import 'package:stream_chat_flutter/stream_chat_flutter.dart' as s;
 import 'package:music_matcher/chat/chat-flow.dart';
+import '../chat/channel_page.dart';
+
+import '../models/Stream-Api-User.dart';
 
 /// // ...
 /// await Firebase.initializeApp(
@@ -378,10 +382,20 @@ class NearbyFriendsProfile extends StatelessWidget {
             // final channel = await StreamApi.createChannel(client, type: "messaging", name: otherUser, id: id, image: url, idMembers: [id, otherUser]);
             // StreamApi.watchChannel(client, type: type, id: id);
 
+            String username = s.StreamChat.of(context).currentUser!.name;
+            String id = s.StreamChat.of(context).currentUser!.id;
+            String url = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&q=80";
+            StreamApi.initUser(client, username: username, urlImage: url, id: id, token: client.devToken(id).rawValue);
+            String birthdate = data["date_of_birth"]!.replaceAll("/", "-");
+            String streamChatUserId = data["name"]! + birthdate;
+            final channel = await StreamApi.createChannel(client, type: "messaging", name: streamChatUserId, id: id, image: url, idMembers: [id, data['userId']]);
+            StreamApi.watchChannel(client, type: channel.type, id: id);
+
             Navigator.of(context).push(MaterialPageRoute(builder: (_) =>
             // s.ChannelsBloc(child: s.StreamChat(client: client, child: ChatScreen(client: client, channel: channel,title: otherUser)),
-            s.ChannelsBloc(child: s.StreamChat(client: client, child: ChatScreen(client: client)),
-            )));
+            // s.ChannelsBloc(child: s.StreamChat(client: client, child: ChatScreen(client: client)),
+            s.ChannelsBloc(child: s.StreamChannel(child: ChannelPage(), channel: channel)),
+            ));
           },
           child: const Text(r"Let's Chat!"),
           )
