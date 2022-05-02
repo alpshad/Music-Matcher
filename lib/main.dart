@@ -147,7 +147,7 @@ class _HomeScreen extends State<HomeScreen> {
   void setupStreamChat(Map<String, dynamic> userData){
     print("userdata is " + userData.toString());
     String birthdate = userData["date_of_birth"]!.replaceAll("/", "-");
-    String streamChatUserId = userData["name"]!.replaceAll(" ", "") + birthdate;
+    String streamChatUserId = userData["name"]!.replaceAll(" ", "").toString().toLowerCase() + birthdate;
     widget.client.connectUser(
       s.User(id: streamChatUserId),
       widget.client.devToken(streamChatUserId).rawValue,
