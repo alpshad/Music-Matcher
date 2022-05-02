@@ -489,12 +489,23 @@ class _HomeScreen extends State<HomeScreen> {
                   children = [];
                   if (snapshot.data != null) {
                     children.add(Container(
-                      // Spotify not connected
                       padding: const EdgeInsets.all(10),
                       child: const Text("Your Friends", textAlign: TextAlign.center,
                         style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w500, fontSize: 24),
                       )
                     ));
+                    if (snapshot.data!.isEmpty) {
+                      children.add(Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: const BoxDecoration(
+                          color: Colors.white
+                        ),
+                        child: const Text("No friends yet. Connect with similar users!", textAlign: TextAlign.center,
+                          style: TextStyle(color: Color.fromARGB(255, 90, 90, 90), fontWeight: FontWeight.w500, fontSize: 20),
+                        )
+                      ));
+                    }
+
                     for (var doc in snapshot.data!) {
                       children.add(Container(
                         padding: const EdgeInsets.all(0),
