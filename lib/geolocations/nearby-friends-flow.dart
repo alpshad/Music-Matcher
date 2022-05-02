@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:geoflutterfire/geoflutterfire.dart';
@@ -381,12 +383,12 @@ class NearbyFriendsProfile extends StatelessWidget {
 
             String username = s.StreamChat.of(context).currentUser!.name;
             String id = s.StreamChat.of(context).currentUser!.id;
-            String url = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&q=80";
+            String url = data['image'];
             StreamApi.initUser(client, username: username, urlImage: url, id: id, token: client.devToken(id).rawValue);
             String birthdate = data["date_of_birth"]!.replaceAll("/", "-");
-            String streamChatUserId = data["name"]! + birthdate;
-            final channel = await StreamApi.createChannel(client, type: "messaging", name: streamChatUserId, id: id, image: url, idMembers: [id, data['userId']]);
-            StreamApi.watchChannel(client, type: channel.type, id: id);
+            String streamChatUserId = data["name"]!.replaceAll(" ", "") + birthdate;
+            final channel = await StreamApi.createChannel(client, type: "messaging", name: data['name'], id: streamChatUserId, image: url, idMembers: [username, streamChatUserId]);
+            StreamApi.watchChannel(client, type: channel.type, id: streamChatUserId);
 
             Navigator.of(context).push(MaterialPageRoute(builder: (_) =>
             // s.ChannelsBloc(child: s.StreamChat(client: client, child: ChatScreen(client: client, channel: channel,title: otherUser)),
