@@ -1,6 +1,3 @@
-import 'dart:html';
-import 'dart:typed_data';
-import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:geoflutterfire/geoflutterfire.dart';

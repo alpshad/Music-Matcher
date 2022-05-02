@@ -26,6 +26,7 @@ import 'models/spotify-auth-tokens.dart';
 
 import 'package:flutter/material.dart';
 import 'package:stream_chat_flutter/stream_chat_flutter.dart' as s;
+import 'package:music_matcher/models/user.dart' as u;
 
 enum ApplicationLoginState {
   loggedOut,
@@ -113,27 +114,12 @@ class _HomeScreen extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    var userId = "";
-    String? email = "";
-    email = FirebaseAuth.instance.currentUser?.email;
-
-    if(email == "alpshadow@gmail.com" || email == "thecatnamedwinter@gmail.com"){
-      userId = "Amy";
+    if(userLoggedIn){
+      String uid = FirebaseAuth.instance.currentUser!.uid;
+      u.User.getUserData(uid).then((userData) => {
+        setupStreamChat(userData)
+      });
     }
-    else if(email == "mariov7757@gmail.com"){
-      userId = "Mario";
-    }
-    else if(email == "ziruihuang@email.arizona.edu"){
-      userId = "Ray";
-    }
-    else if(email == "amir.hya@gmail.com" || email == "amirtest1@gmail.com"){
-      userId = "Amir";
-    }
-
-    widget.client.connectUser(
-      s.User(id: userId),
-      widget.client.devToken(userId).rawValue,
-    ).then((result)=> print("finished"));
 
     SpotifyAuthTokens.readTokens()
     .then((result) => {
@@ -156,6 +142,16 @@ class _HomeScreen extends State<HomeScreen> {
         )
       }
     });
+  }
+
+  void setupStreamChat(Map<String, dynamic> userData){
+    print("userdata is " + userData.toString());
+    String birthdate = userData["date_of_birth"]!.replaceAll("/", "-");
+    String streamChatUserId = userData["name"]! + birthdate;
+    widget.client.connectUser(
+      s.User(id: streamChatUserId),
+      widget.client.devToken(streamChatUserId).rawValue,
+    ).then((result)=> print("finished"));
   }
 
   Future<void> addFriend(String id) async {
@@ -309,19 +305,9 @@ class _HomeScreen extends State<HomeScreen> {
                           padding: const EdgeInsets.all(10),
                           child: ElevatedButton(
                             child: Text("Chat"),
+                            key: Key("chat"),
                             onPressed: () async {
-                              /*
-                              String username = StreamChat.of(context).currentUser!.name;
-                              String id = StreamChat.of(context).currentUser!.id;
-                              String url = "http://cdn.onlinewebfonts.com/svg/img_56553.png";
-                              StreamApi.initUser(widget.client, username: username, urlImage: url, id: id, token: widget.client.devToken(id).rawValue);
-                              final otherUser = "Ray";
-                              final channel = await StreamApi.createChannel(widget.client, type: "messaging", name: otherUser, id: id, image: url, idMembers: [id, otherUser]);
-                              // StreamApi.watchChannel(client, type: type, id: id)
-
-                               */
                               Navigator.of(context).push(MaterialPageRoute(builder: (_) =>
-                                  // ChannelsBloc(child: StreamChat(client: widget.client, child: ChatScreen(client: widget.client, channel: channel,title: otherUser)),
                               ChannelsBloc(child: StreamChat(client: widget.client, child: ChatScreen(client: widget.client)),
                               )));
                             },
