@@ -7,10 +7,12 @@ import 'package:location/location.dart';
 import 'dart:async';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/cupertino.dart';
-import 'dart:ui';
+import 'dart:ui' as ui;
 import 'package:stream_chat_flutter/stream_chat_flutter.dart' as s;
 import 'package:music_matcher/chat/chat-flow.dart';
-import 'package:music_matcher/models/Stream-Api-User.dart';
+import '../chat/channel_page.dart';
+
+import '../models/Stream-Api-User.dart';
 
 /// // ...
 /// await Firebase.initializeApp(
@@ -19,29 +21,82 @@ import 'package:music_matcher/models/Stream-Api-User.dart';
 /// ```
 ///
 ///
-// void main() async {
-//   WidgetsFlutterBinding.ensureInitialized();
-//   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-//   // await Geolocator.requestPermission();
-//   runApp(MaterialApp(
-//     title: 'Geo Flutter Fire example',
-//     home: NearbyFriendsScreen(),
-//     debugShowCheckedModeBanner: false,
-//   ));
-// }
+class _FriendListItem extends StatelessWidget {
+  final DocumentSnapshot document;
+  late Map<String, dynamic> data;
+  late s.StreamChatClient client;
+
+  _FriendListItem(this.document, this.client){
+    data = document.data() as Map<String, dynamic>;
+    client = client;
+  }
+
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+        leading: CircleAvatar(
+            radius: 30.0,
+            backgroundImage: NetworkImage(data['image']),
+            backgroundColor: Colors.transparent
+        ),
+        title: Text(data['name']),
+        subtitle: Text(data['genres']),
+        onTap: (){
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => s.ChannelsBloc(child: s.StreamChat(client: client, child: NearbyFriendsProfile(client: client, data: data,)))),
+          );
+        }
+    );
+  }
+
+}
+
+class FriendsList extends StatelessWidget {
+  final List<DocumentSnapshot> documentList;
+  final s.StreamChatClient client;
+
+  FriendsList(this.documentList, this.client);
+
+  @override
+  Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    return ConstrainedBox(
+        constraints: BoxConstraints(
+        minHeight: mediaQuery.size.width - 30,
+        maxHeight: mediaQuery.size.height * (1 / 2),
+        ),
+     child:ListView(
+        shrinkWrap: true,
+        padding: EdgeInsets.symmetric(vertical: 8.0),
+        children: _buildFriendsList()
+    ),
+    );
+  }
+
+  List<_FriendListItem> _buildFriendsList() {
+    return documentList.map((document) => _FriendListItem(document, client))
+        .toList();
+  }
+
+}
 
 class NearbyFriendsScreen extends StatefulWidget {
   const NearbyFriendsScreen({Key? key, required this.client}) : super(key: key);
   final s.StreamChatClient client;
   @override
-  _NearbyFriendsScreenState createState() => _NearbyFriendsScreenState();
+  _NearbyFriendsScreenState createState() => _NearbyFriendsScreenState(client);
 }
 
 class _NearbyFriendsScreenState extends State<NearbyFriendsScreen> {
   LocationData? _currentPosition;
-  GoogleMapController? _mapController;
   TextEditingController? _latitudeController, _longitudeController;
   Location location = Location();
+  List<DocumentSnapshot> _document = [];
+  final s.StreamChatClient client;
+
+  _NearbyFriendsScreenState(this.client);
 
   GoogleMapController? _controller;
   LatLng _initialcameraposition = const LatLng(32.23193637129737, -110.94996986837795);
@@ -73,18 +128,6 @@ class _NearbyFriendsScreenState extends State<NearbyFriendsScreen> {
           center: center, radius: 1.6 * rad, field: 'position', strictMode: true);
     });
 
-    // _firestore.collection('geolocations').get().then((snapshot) {
-    //   for (DocumentSnapshot ds in snapshot.docs){
-    //     ds.reference.delete();
-    //   }});
-    //
-    _firestore
-        .collection('geolocations')
-        .add({'name': 'James', 'position': geo.point(latitude: 32.28480489100139, longitude: -110.94488968029498)},
-    ).then((_) {
-      ;
-    });
-
   }
 
   void _onMapCreated(GoogleMapController _cntlr)
@@ -102,6 +145,7 @@ class _NearbyFriendsScreenState extends State<NearbyFriendsScreen> {
     });
     stream.listen((List<DocumentSnapshot> documentList) {
       _updateMarkers(documentList);
+      _document = documentList;
     });
   }
 
@@ -135,7 +179,7 @@ class _NearbyFriendsScreenState extends State<NearbyFriendsScreen> {
                   margin: EdgeInsets.symmetric(vertical: 8),
                   child: SizedBox(
                     width: mediaQuery.size.width - 30,
-                    height: mediaQuery.size.height * (2 / 3),
+                    height: mediaQuery.size.height * (1 / 4),
                     child:GoogleMap(
                         initialCameraPosition: CameraPosition(target: _initialcameraposition,
                         zoom: 15),
@@ -149,6 +193,7 @@ class _NearbyFriendsScreenState extends State<NearbyFriendsScreen> {
                   ),
                 ),
               ),
+              FriendsList(_document, client),
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
                 child: Slider(
@@ -169,7 +214,7 @@ class _NearbyFriendsScreenState extends State<NearbyFriendsScreen> {
     );
   }
 
-  _addMarker(double lat, double lng, String name) async {
+  _addMarker(double lat, double lng, String name, Map<String, dynamic> data) async {
     BitmapDescriptor markerbitmap = await BitmapDescriptor.fromAssetImage(
       ImageConfiguration(),
       r"C:\Users\Raymond\StudioProjects\Music-Matcher\assets\images\assets\images\user.png",
@@ -185,7 +230,7 @@ class _NearbyFriendsScreenState extends State<NearbyFriendsScreen> {
       onTap: (){
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => s.ChannelsBloc(child: s.StreamChat(client: widget.client, child: NearbyFriendsProfile(client: widget.client)))),
+          MaterialPageRoute(builder: (context) => s.ChannelsBloc(child: s.StreamChat(client: widget.client, child: NearbyFriendsProfile(client: widget.client, data: data,)))),
         );
       }
     );
@@ -204,10 +249,11 @@ class _NearbyFriendsScreenState extends State<NearbyFriendsScreen> {
   }
 
   void _updateMarkers(List<DocumentSnapshot> documentList) {
+    _document = documentList;
     documentList.forEach((DocumentSnapshot document) {
       final data = document.data() as Map<String, dynamic>;
       final GeoPoint point = data['position']['geopoint'];
-      _addMarker(point.latitude, point.longitude, data['name']);
+      _addMarker(point.latitude, point.longitude, data['name'], data);
     });
   }
 
@@ -259,7 +305,8 @@ class _NearbyFriendsScreenState extends State<NearbyFriendsScreen> {
 
 class NearbyFriendsProfile extends StatelessWidget {
   final s.StreamChatClient client;
-  const NearbyFriendsProfile({Key? key, HomeScreen, required this.client}) : super(key: key);
+  final Map<String, dynamic> data;
+  NearbyFriendsProfile({Key? key, HomeScreen, required this.client, required this.data}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -276,8 +323,7 @@ class NearbyFriendsProfile extends StatelessWidget {
                 Image(
                   height: MediaQuery.of(context).size.height / 3,
                   fit: BoxFit.cover,
-                  image: const NetworkImage(
-                      'https://www.worldatlas.com/r/w768/upload/07/b4/c5/blues.jpg'),
+                  image: NetworkImage(data['backgroundimage']),
                 ),
                 Positioned(
                     bottom: -50.0,
@@ -286,8 +332,7 @@ class NearbyFriendsProfile extends StatelessWidget {
                       backgroundColor: Colors.black,
                       child: CircleAvatar(
                         radius: 75,
-                        backgroundImage: NetworkImage(
-                            'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&q=80'),
+                        backgroundImage: NetworkImage(data['image']),
                       ),
                     ))
               ]),
@@ -295,13 +340,12 @@ class NearbyFriendsProfile extends StatelessWidget {
             height: 45,
           ),
           ListTile(
-            title: Center(child: Text('John')),
-            subtitle: Center(child: Text('Rhythm and blues')),
+            title: Center(child: Text(data['name'])),
+            subtitle: Center(child: Text(data['genres'])),
           ),
           ListTile(
             title: Text('About me'),
-            subtitle: Text(
-                'I like Rhythm and blues'),
+            subtitle: Text(data['aboutme']),
           ),
           SizedBox(
             height: 20,
@@ -335,10 +379,20 @@ class NearbyFriendsProfile extends StatelessWidget {
             // final channel = await StreamApi.createChannel(client, type: "messaging", name: otherUser, id: id, image: url, idMembers: [id, otherUser]);
             // StreamApi.watchChannel(client, type: type, id: id);
 
+            String username = s.StreamChat.of(context).currentUser!.name;
+            String id = s.StreamChat.of(context).currentUser!.id;
+            String url = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&q=80";
+            StreamApi.initUser(client, username: username, urlImage: url, id: id, token: client.devToken(id).rawValue);
+            String birthdate = data["date_of_birth"]!.replaceAll("/", "-");
+            String streamChatUserId = data["name"]! + birthdate;
+            final channel = await StreamApi.createChannel(client, type: "messaging", name: streamChatUserId, id: id, image: url, idMembers: [id, data['userId']]);
+            StreamApi.watchChannel(client, type: channel.type, id: id);
+
             Navigator.of(context).push(MaterialPageRoute(builder: (_) =>
             // s.ChannelsBloc(child: s.StreamChat(client: client, child: ChatScreen(client: client, channel: channel,title: otherUser)),
-            s.ChannelsBloc(child: s.StreamChat(client: client, child: ChatScreen(client: client)),
-            )));
+            // s.ChannelsBloc(child: s.StreamChat(client: client, child: ChatScreen(client: client)),
+            s.ChannelsBloc(child: s.StreamChannel(child: ChannelPage(), channel: channel)),
+            ));
           },
           child: const Text(r"Let's Chat!"),
           )

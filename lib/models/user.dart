@@ -20,4 +20,14 @@ class User {
       .then((value) => print("User added"))
       .catchError((error) => print("Failed to add user"));
   }
+
+  static Future<Map<String, dynamic>> getUserData(String uid) async{
+    var uid = FirebaseAuth.instance.currentUser!.uid;
+    var snapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .limit(1)
+        .where('userId', isEqualTo: uid)
+        .get();
+    return snapshot.docs[0].data();
+  }
 }
